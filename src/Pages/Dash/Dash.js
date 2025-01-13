@@ -15,7 +15,7 @@ import {
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Avatar, Icon } from '@rneui/themed';
-import { LIGHT, REGULAR } from '../../constants/fontfamily';
+import { BOLD, LIGHT, REGULAR, SEMIBOLD } from '../../constants/fontfamily';
 import { HEIGHT, WIDTH } from '../../constants/config';
 import { clearAll } from '../../utils/Storage';
 import { checkuserToken } from '../../redux/actions/auth';
@@ -24,17 +24,31 @@ import { GETNETWORK } from '../../utils/Network';
 import { BASE_URL } from '../../constants/url';
 import TripDetailsGrid from '../VehicleMap/TripDetailsGrid';
 import { BLACK } from '../../constants/color';
+import { RFValue } from 'react-native-responsive-fontsize';
+import moment from 'moment';
+import { useNavigation } from '@react-navigation/native';
+import Track from '../Track/Track';
 
-const Dash = () => {
+const Dash = ({ }) => {
     const [vehicleData, setVehicleData] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [loading, setLoading] = useState(true); // Loading state
     const [error, setError] = useState(null); // Error state
+    const [History, setHistory] = useState(false); // History state
+    const [selectedValue, setSelectedValue] = useState({})
+    const [Location, setLocation] = useState([]); // Location state
+    const [data, setData] = useState();
+    const navigation = useNavigation()
     const Dispatch = useDispatch();
+    const [showMap, setShowMap] = React.useState(false);
+
+    const handleClose = () => {
+        setShowMap(false); // Hide the map when close button is pressed
+    };
 
     useEffect(() => {
         GetDerivedData();
-    }, []); // Only run once when the component mounts
+    }, [History]); // Only run once when the component mounts
 
     const GetDerivedData = () => {
         const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
@@ -42,9 +56,10 @@ const Dash = () => {
         // Fetch data from the API
         GETNETWORK(Url, true)
             .then((response) => {
-                console.log(response.data);
+                console.log('response.dataresponse.data', response.data.live_config);
                 setLoading(false); // Set loading to false once the data is fetched
                 if (response.data && response.data.things) {
+                    setData(response); // Set data dynamically from the API response
                     setVehicleData(response.data.things); // Set data dynamically from the API response
                 } else {
                     setError('No data available');
@@ -56,6 +71,25 @@ const Dash = () => {
                 console.error("Error fetching data: ", error);
             });
     };
+
+    const GetSelectedVehicle = (item) => {
+        const Url = `${BASE_URL}things/?thing_id=${item}&project_id=117`;
+        console.log('item GetSelectedVehicle', item);
+
+        GETNETWORK(Url, true)
+            .then((response) => {
+                console.log('GetSelectedVehicle inside', response.data.derived_live_config);
+                setSelectedValue(response.data.derived_live_config); // Set the nested object directly if needed
+                setLocation(response.data.derived_live_config.location)
+                setLoading(false);
+            })
+            .catch((error) => {
+                setLoading(false);
+                setError('Failed to fetch data');
+                console.error("Error fetching data: ", error);
+            });
+    };
+
 
     const renderLoading = () => (
         <SafeAreaView style={styles.loadingContainer}>
@@ -69,50 +103,108 @@ const Dash = () => {
         </SafeAreaView>
     );
 
+
+
     const renderVehicleCard = ({ item }) => (
-        <View style={styles.cardContainer}>
+        <TouchableOpacity
+            onPress={() => {
+                console.log('itemmm', item)
+                GetSelectedVehicle(item.thing_id)
+
+                setHistory(true)
+                setShowModal(true);
+            }}
+            style={styles.cardContainer}
+        >
+            {/* Card Header */}
             <View style={styles.cardHeader}>
-                <Text style={styles.cardTitle}>{item.thing_name}</Text>
+                <View style={{ ...styles.row }}>
+                    <View style={styles.row}>
+                        <Icon name="directions-car" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                        <Text style={styles.cardTitle}>{item.thing_name}</Text>
+                    </View>
+                    <View style={styles.row}>
+                        <Text style={styles.cardLabel}>Vehicle No: </Text>
+                        <Text style={styles.cardValue}>{item.properties.default_properties.vehicle_no}</Text>
+                    </View>
+                </View>
+                {/* Separation Line */}
+                <View style={styles.separator} />
             </View>
-            <View style={styles.cardBody}>
-                <View style={styles.cardRow}>
-                    <Icon name="directions-bus" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Tour: </Text>
-                    <Text>{item.properties.default_properties.tour}</Text>
+
+            {/* Card Body */}
+            {/* Row 1: Vehicle Type and Driver */}
+            <View style={styles.row}>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="category" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Type: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.schema[0].type}</Text>
                 </View>
-                <View style={styles.cardRow}>
-                    <Icon name="route" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Route: </Text>
-                    <Text>{item.properties.default_properties.route}</Text>
-                </View>
-                <View style={styles.cardRow}>
-                    <Icon name="car" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Vehicle No: </Text>
-                    <Text>{item.properties.default_properties.vehicle_no}</Text>
-                </View>
-                <View style={styles.cardRow}>
-                    <Icon name="speed" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Speed Limit: </Text>
-                    <Text>{item.properties.default_properties.speed_limit}</Text>
-                </View>
-                <View style={styles.cardRow}>
-                    <Icon name="person" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Driver: </Text>
-                    <Text>{item.properties.default_properties.driver_name}</Text>
-                </View>
-                <View style={styles.cardRow}>
-                    <Icon name="directions-car" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Type: </Text>
-                    <Text>{item.properties.default_properties.vehicle_type}</Text>
-                </View>
-                <View style={styles.cardRow}>
-                    <Icon name="event-note" type="MaterialIcons" color="#316163" size={30} />
-                    <Text style={styles.cardLabel}>Next Maintenance: </Text>
-                    <Text>{item.properties.default_properties.next_mentainance_date}</Text>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="account-circle" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Driver: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.desc}</Text>
                 </View>
             </View>
-        </View>
+
+            {/* Row 2: Status and Speed */}
+            <View style={styles.row}>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="check-circle" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Status: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.derived_live_config.status}</Text>
+                </View>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="speed" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Speed: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.derived_live_config.speed} km/h</Text>
+                </View>
+            </View>
+
+            {/* Row 3: Acceleration and Total Distance */}
+            <View style={styles.row}>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="trending-up" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Acc: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.derived_live_config.acceleration} m/s²</Text>
+                </View>
+            </View>
+            <View style={styles.rowWithIcon}>
+                <Icon name="straighten" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                <Text style={styles.cardLabel}>Total Dist: </Text>
+                <Text style={styles.cardValue}>{item.derived_live_config.total_distance} km</Text>
+            </View>
+
+            {/* Row 4: Current Distance and Updated On */}
+            <View style={styles.row}>
+                <View style={styles.row}>
+                    <View style={styles.rowWithIcon}>
+                        <Icon name="place" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Current Dist: </Text>
+                    </View>
+                    <Text style={styles.cardValue}>{item.derived_live_config.current_distance} km</Text>
+                </View>
+            </View>
+            <View style={styles.rowWithIcon}>
+                <Icon name="update" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                <Text style={styles.cardLabel}>Updated On: </Text>
+                <Text style={styles.cardValue}>{moment(item.derived_live_config.received_datetime).format('DD/MM/YYYY h:mm a')}</Text>
+            </View>
+        </TouchableOpacity>
     );
+
+    console.log('Location', Location)
+
 
 
     return (
@@ -123,59 +215,68 @@ const Dash = () => {
                     style={{ flex: 1 }}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 >
-                    <ScrollView contentContainerStyle={{ flexGrow: 1 }} scrollEnabled={true}>
-                        <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
-                            {/* Header Container */}
-                            <View
+                    {/* Header Container */}
+                    <View
+                        style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            width: '95%',
+                            paddingVertical: 25,
+                            paddingHorizontal: 10,
+                            backgroundColor: '#316163',
+                            shadowColor: '#000',
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.25,
+                            shadowRadius: 3.5,
+                            borderRadius: 8,
+                        }}
+                    >
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                            <Avatar
+                                size="medium"
+                                rounded
+                                source={{
+                                    uri: 'https://randomuser.me/api/portraits/men/1.jpg',
+                                }}
+                            />
+                            <Text
                                 style={{
-                                    flexDirection: 'row',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    width: '95%',
-                                    paddingVertical: 25,
-                                    paddingHorizontal: 10,
-                                    backgroundColor: '#316163',
-                                    shadowColor: '#000',
-                                    shadowOffset: { width: 0, height: 2 },
-                                    shadowOpacity: 0.25,
-                                    shadowRadius: 3.5,
-                                    borderRadius: 8,
+                                    color: 'white',
+                                    fontWeight: 'bold',
+                                    fontSize: 15,
+                                    marginLeft: 10,
                                 }}
                             >
-                                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                                    <Avatar
-                                        size="medium"
-                                        rounded
-                                        source={{
-                                            uri: 'https://randomuser.me/api/portraits/men/1.jpg',
-                                        }}
-                                    />
-                                    <Text
-                                        style={{
-                                            color: 'white',
-                                            fontWeight: 'bold',
-                                            fontSize: 15,
-                                            marginLeft: 10,
-                                        }}
-                                    >
-                                        Welcome, User Name!
-                                        {'\n'}
-                                        Last login: 2022-03-15 10:30 AM
-                                    </Text>
-                                </View>
-                                <Icon
-                                    onPress={() => {
-                                        clearAll();
-                                        Dispatch(checkuserToken());
-                                    }}
-                                    name="notifications"
-                                    type="AntDesign"
-                                    color="white"
-                                    size={25}
-                                />
+                                Welcome, User Name!
+                                {'\n'}
+                                Last login: 2022-03-15 10:30 AM
+                            </Text>
+                        </View>
+                        <Icon
+                            onPress={() => {
+                                clearAll();
+                                Dispatch(checkuserToken());
+                            }}
+                            name="notifications"
+                            type="AntDesign"
+                            color="white"
+                            size={25}
+                        />
+                    </View>
+                    <ScrollView contentContainerStyle={{ flexGrow: 1 }} scrollEnabled={true}>
+                        <View style={{ flex: 1, alignItems: 'center', width: '100%' }}>
+
+                            <View
+                                style={{
+                                    height: HEIGHT * 0.5
+                                }}
+                            >
+
+
+                                <TripDetailsGrid data={data} />
                             </View>
 
-                            <TripDetailsGrid />
 
                             <View
                                 style={{
@@ -201,17 +302,38 @@ const Dash = () => {
                                 ) : error ? (
                                     renderError()
                                 ) : (
-                                    <FlatList
-                                        data={vehicleData}
-                                        renderItem={renderVehicleCard}
-                                        keyExtractor={(item, index) => index.toString()}
-                                        contentContainerStyle={{ width: '100%', paddingHorizontal: 10 }}
-                                    />
+                                    <View
+                                        style={{
+                                            height: HEIGHT * 0.55,
+                                            width: WIDTH * 0.95,
+                                            alignSelf: 'center',
+
+                                        }}
+                                    >
+
+                                        <FlatList
+                                            nestedScrollEnabled={true}
+                                            data={vehicleData}
+                                            renderItem={renderVehicleCard}
+                                            keyExtractor={(item, index) => index.toString()}
+                                            contentContainerStyle={{ width: '100%', paddingHorizontal: 10 }}
+                                        />
+                                    </View>
                                 )}
                             </View>
                         </View>
                     </ScrollView>
                 </KeyboardAvoidingView>
+
+                {showMap && (
+                    <View style={{ flex: 1 }}>
+                        <Track
+                            latitude={Location[0]} // Pass the latitude value
+                            longitude={Location[1]} // Pass the longitude value
+                            onClose={handleClose} // Handle close functionality
+                        />
+                    </View>
+                )}
 
                 <Modal
                     animationType="slide"
@@ -220,27 +342,106 @@ const Dash = () => {
                     onRequestClose={() => {
                         setShowModal(false);
                     }}
-                    style={{
-                        flex: 1,
-                        width: '100%',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        backgroundColor: 'rgba(100, 100, 100, 0.5)',
-                    }}
                 >
-                    <View
-                        style={{
-                            flex: 1,
-                            width: '100%',
-                            alignSelf: 'center',
-                            alignItems: 'center',
-                            justifyContent: 'flex-end',
-                            backgroundColor: 'rgba(100, 100, 100, 0.9)',
-                        }}
-                    >
-                        {/* Modal Content */}
+                    <View style={styles.modalOverlay}>
+                        <View style={styles.modalCard}>
+                            {/* Header */}
+                            <View style={styles.modalHeader}>
+                                <Text style={styles.modalTitle}>Vehicle Details</Text>
+                                <View style={styles.headerActions}>
+                                    <TouchableOpacity onPress={() => {
+                                        setHistory(true)
+                                        console.log('History pressed')
+                                    }
+                                    }>
+                                        <Text style={{ ...styles.headerButton, color: History == true ? 'grey' : '#316163', fontSize: History == true ? RFValue(13) : '' }}>History</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => {
+                                        setShowMap(true)
+                                        console.log('Track pressed')
+                                    }}>
+                                        <Text style={styles.headerButton}>Track</Text>
+                                    </TouchableOpacity>
+                                    <TouchableOpacity onPress={() => {
+                                        setHistory(false)
+                                        setShowModal(false)
+                                    }}>
+                                        <Text style={styles.headerButton}>Close</Text>
+                                    </TouchableOpacity>
+                                </View>
+                            </View>
+
+                            {/* Separation Line */}
+                            <View style={styles.separator} />
+
+                            {/* Modal Content */}
+                            <View style={styles.modalContent}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                                    <View style={styles.detailRow}>
+                                        <View style={styles.rowWithIcon}>
+                                            <Icon name="speed" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                                            <Text style={styles.detailLabel}>Speed: </Text>
+                                        </View>
+                                        <Text style={styles.detailValue}>
+                                            {selectedValue?.speed ?? 'N/A'} km/h
+                                        </Text>
+                                    </View>
+
+                                    <View style={styles.detailRow}>
+                                        <View style={styles.rowWithIcon}>
+                                            <Icon name="trending-up" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                                            <Text style={styles.detailLabel}>Acc: </Text>
+                                        </View>
+                                        <Text style={styles.detailValue}>
+                                            {selectedValue?.acceleration ?? 'N/A'} m/s²
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+                                    <View style={styles.detailRow}>
+                                        <View style={styles.rowWithIcon}>
+                                            <Icon name="straighten" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                                            <Text style={styles.detailLabel}>Total Dist: </Text>
+                                        </View>
+                                        <Text style={styles.detailValue}>
+                                            {selectedValue?.total_distance?.toFixed(2) ?? 'N/A'} km
+                                        </Text>
+                                    </View>
+
+                                </View>
+
+                                <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%' }}>
+
+                                    <View style={styles.detailRow}>
+                                        <View style={styles.rowWithIcon}>
+                                            <Icon name="place" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                                            <Text style={styles.detailLabel}>Current Dist: </Text>
+                                        </View>
+                                        <Text style={styles.detailValue}>
+                                            {selectedValue?.current_distance ?? 'N/A'} km
+                                        </Text>
+                                    </View>
+                                </View>
+
+                                <View style={styles.detailRow}>
+                                    <View style={styles.rowWithIcon}>
+                                        <Icon name="update" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
+                                        <Text style={styles.detailLabel}>Last Updated: </Text>
+                                    </View>
+                                    <Text style={styles.detailValue}>
+                                        {selectedValue?.generated_datetime
+                                            ? moment(selectedValue.generated_datetime).format('DD/MM/YYYY h:mm a')
+                                            : 'N/A'}
+                                    </Text>
+                                </View>
+                            </View>
+
+
+                        </View>
                     </View>
                 </Modal>
+
             </SafeAreaView>
         </>
     );
@@ -267,89 +468,108 @@ const styles = StyleSheet.create({
     },
 
     cardContainer: {
-        backgroundColor: 'white',
+        width: WIDTH * 0.93,
+        height: HEIGHT * 0.39,
+        alignSelf: 'center',
+        backgroundColor: '#F7F7F7',
         borderRadius: 10,
-        marginVertical: 10,
-        padding: 15,
-        width: WIDTH * 0.9,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.25,
-        shadowRadius: 3.5,
-        elevation: 5,
+        padding: 12,
+        marginVertical: 8,
+        marginHorizontal: 12,
+        elevation: 4,
     },
-
     cardHeader: {
-        borderBottomWidth: 1,
-        borderBottomColor: '#ddd',
-        paddingBottom: 10,
         marginBottom: 10,
     },
-
-    cardTitle: {
-        fontSize: 18,
-        fontFamily: REGULAR,
-        color: 'black'
-
-    },
-
-    cardBody: {
-        width: '100%',
-        paddingVertical: 10,
-        alignSelf: 'center',
-    },
-
-    cardRow: {
+    row: {
         flexDirection: 'row',
-        marginBottom: 5,
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginVertical: 4,
     },
-
+    rowWithIcon: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    icon: {
+        margin: 4,
+    },
+    cardTitle: {
+        fontSize: 16,
+        fontFamily: BOLD,
+        color: '#316163',
+    },
     cardLabel: {
         fontSize: 14,
-        fontWeight: '600',
-        color: '#333',
-        width: 120,
-    },
+        fontFamily: SEMIBOLD,
 
-    modalContainer: {
+        color: '#333',
+        margin: 2,
+    },
+    cardValue: {
+        fontSize: 16,
+        color: 'black',
+        fontFamily: REGULAR,
+        // marginLeft: 8,
+    },
+    modalOverlay: {
+        flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        flex: 1,
-        width: '100%',
         backgroundColor: 'rgba(100, 100, 100, 0.5)',
     },
-
-    modalContent: {
+    modalCard: {
         width: '90%',
         backgroundColor: '#fff',
         borderRadius: 10,
-        padding: 20,
-        alignItems: 'center',
+        padding: 16,
+        elevation: 5,
     },
-
     modalHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 10,
+    },
+    modalTitle: {
         fontSize: 18,
         fontWeight: 'bold',
-        marginBottom: 20,
+        color: '#316163',
     },
-
-    modalText: {
-        fontSize: 16,
-        marginBottom: 20,
-    },
-
-    closeButton: {
-        backgroundColor: '#316163',
-        paddingVertical: 10,
-        paddingHorizontal: 25,
-        borderRadius: 5,
+    headerActions: {
+        flexDirection: 'row',
         alignItems: 'center',
     },
-
-    closeButtonText: {
-        color: 'white',
+    headerButton: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: '#316163',
+        marginLeft: 10,
+    },
+    separator: {
+        height: 1,
+        backgroundColor: '#ddd',
+        marginVertical: 10,
+    },
+    modalContent: {
+        marginTop: 10,
+    },
+    detailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignSelf: "center",
+        alignItems: 'center',
+        marginVertical: 8,
+    },
+    detailLabel: {
         fontSize: 16,
-        fontWeight: 'bold',
+        fontWeight: '600',
+        color: '#333',
+    },
+    detailValue: {
+        fontSize: 16,
+        fontWeight: '400',
+        color: '#555',
     },
 });
 

@@ -2,6 +2,7 @@ import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import DashBoard from '../Pages/DashBoard/DashBoard';
 import VehicleMap from '../Pages/VehicleMap/VehicleMap';
+import Track from '../Pages/Track/Track';
 
 const { Navigator, Screen } = createNativeStackNavigator();
 
@@ -14,5 +15,6 @@ export default HomeStack = () => {
       component={DashBoard}
     />
     <Screen name="VehicleMap" component={VehicleMap} />
+    <Screen name="Track" component={Track} />
   </Navigator>;
 };
