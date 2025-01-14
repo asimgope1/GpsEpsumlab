@@ -12,6 +12,7 @@ import {
     Modal,
     StyleSheet,
     ActivityIndicator,
+    Alert,
 } from 'react-native';
 import React, { useState, useEffect } from 'react';
 import { Avatar, Icon } from '@rneui/themed';
@@ -120,8 +121,25 @@ const Dash = ({ }) => {
             <View style={styles.cardHeader}>
                 <View style={{ ...styles.row }}>
                     <View style={styles.row}>
-                        <Icon name="directions-car" type="MaterialIcons" color="#316163" size={30} style={styles.icon} />
-                        <Text style={styles.cardTitle}>{item.thing_name}</Text>
+                        <Icon
+                            name="directions-car"
+                            type="MaterialIcons"
+                            color={
+                                item.derived_live_config.status === 'STOPPED' ? '#DC3545' :
+                                    item.derived_live_config.status === 'RUNNING' ? '#28A745' :
+                                        item.derived_live_config.status === 'IDLE' ? '#FFC107' :
+                                            item.derived_live_config.status === 'OVERSPEED' ? '#FD7E14' :
+                                                item.derived_live_config.status === 'UNREACHABLE' ? '#6C757D' :
+                                                    '#007BFF' // Default color for 'ALL' or unknown statuses
+                            }
+                            size={30}
+                            style={{ ...styles.icon }}
+                        />
+
+                        <View>
+
+                            <Text style={{ ...styles.cardTitle }}>{item.thing_name}</Text>
+                        </View>
                     </View>
                     <View style={styles.row}>
                         <Text style={styles.cardLabel}>Vehicle No: </Text>
@@ -129,6 +147,7 @@ const Dash = ({ }) => {
                     </View>
                 </View>
                 {/* Separation Line */}
+                <Text style={{ ...styles.cardValue, fontSize: 13, color: 'grey', marginLeft: 10 }}>{moment(item.derived_live_config.received_datetime).format('DD/MM/YYYY h:mm a')}</Text>
                 <View style={styles.separator} />
             </View>
 
@@ -137,10 +156,10 @@ const Dash = ({ }) => {
             <View style={styles.row}>
                 <View style={styles.row}>
                     <View style={styles.rowWithIcon}>
-                        <Icon name="category" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
-                        <Text style={styles.cardLabel}>Type: </Text>
+                        <Icon name="check-circle" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={{ ...styles.cardLabel }}>Status: </Text>
                     </View>
-                    <Text style={styles.cardValue}>{item.schema[0].type}</Text>
+                    <Text style={{ ...styles.cardValue }}>{item.derived_live_config.status}</Text>
                 </View>
                 <View style={styles.row}>
                     <View style={styles.rowWithIcon}>
@@ -153,12 +172,14 @@ const Dash = ({ }) => {
 
             {/* Row 2: Status and Speed */}
             <View style={styles.row}>
+
+
                 <View style={styles.row}>
                     <View style={styles.rowWithIcon}>
-                        <Icon name="check-circle" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
-                        <Text style={styles.cardLabel}>Status: </Text>
+                        <Icon name="trending-up" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
+                        <Text style={styles.cardLabel}>Acc: </Text>
                     </View>
-                    <Text style={styles.cardValue}>{item.derived_live_config.status}</Text>
+                    <Text style={styles.cardValue}>{item.derived_live_config.acceleration} m/s²</Text>
                 </View>
                 <View style={styles.row}>
                     <View style={styles.rowWithIcon}>
@@ -171,13 +192,7 @@ const Dash = ({ }) => {
 
             {/* Row 3: Acceleration and Total Distance */}
             <View style={styles.row}>
-                <View style={styles.row}>
-                    <View style={styles.rowWithIcon}>
-                        <Icon name="trending-up" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
-                        <Text style={styles.cardLabel}>Acc: </Text>
-                    </View>
-                    <Text style={styles.cardValue}>{item.derived_live_config.acceleration} m/s²</Text>
-                </View>
+
             </View>
             <View style={styles.rowWithIcon}>
                 <Icon name="straighten" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
@@ -196,9 +211,7 @@ const Dash = ({ }) => {
                 </View>
             </View>
             <View style={styles.rowWithIcon}>
-                <Icon name="update" type="MaterialIcons" color="#316163" size={23} style={styles.icon} />
-                <Text style={styles.cardLabel}>Updated On: </Text>
-                <Text style={styles.cardValue}>{moment(item.derived_live_config.received_datetime).format('DD/MM/YYYY h:mm a')}</Text>
+
             </View>
         </TouchableOpacity>
     );
@@ -325,7 +338,7 @@ const Dash = ({ }) => {
                     </ScrollView>
                 </KeyboardAvoidingView>
 
-                {showMap && (
+                {showMap && Array.isArray(Location) && Location.length > 0 && Location[0] !== undefined && Location[1] !== undefined ? (
                     <View style={{ flex: 1 }}>
                         <Track
                             latitude={Location[0]} // Pass the latitude value
@@ -333,7 +346,14 @@ const Dash = ({ }) => {
                             onClose={handleClose} // Handle close functionality
                         />
                     </View>
+                ) : showMap && (
+                    Alert.alert(
+                        "Invalid Location",
+                        "Location data is not available. Cannot track.",
+                        [{ text: "OK" }]
+                    )
                 )}
+
 
                 <Modal
                     animationType="slide"
