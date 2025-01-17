@@ -1,4 +1,4 @@
-import { getObjByKey } from './Storage';
+import {getObjByKey} from './Storage';
 export const POSTNETWORK = async (
   url,
   payload,
@@ -11,9 +11,12 @@ export const POSTNETWORK = async (
   };
   if (token) {
     let loginRes = await getObjByKey('loginResponse');
-    headers = { ...headers, Authorization: `Token ${loginRes?.data?.access_token}` };
+    headers = {
+      ...headers,
+      Authorization: `Token ${loginRes?.data?.access_token}`,
+    };
   }
-  console.log('HEADERS: ', headers);
+  // console.log('HEADERS: ', headers);
   return await fetch(url, {
     method: 'POST',
     headers: headers,
@@ -40,7 +43,10 @@ export const PUTNETWORK = async (
   };
   if (token) {
     let loginRes = await getObjByKey('loginResponse');
-    headers = { ...headers, Authorization: `Bearer ${loginRes?.data?.access_token}` };
+    headers = {
+      ...headers,
+      Authorization: `Bearer ${loginRes?.data?.access_token}`,
+    };
   }
   // console.log("HEADERS: ", headers);
   return await fetch(url, {
@@ -66,7 +72,10 @@ export const GETNETWORK = async (url, token = false) => {
   if (token) {
     let loginRes = await getObjByKey('loginResponse');
     // console.log(loginRes);
-    headers = { ...headers, Authorization: `Bearer ${loginRes?.data?.access_token}` };
+    headers = {
+      ...headers,
+      Authorization: `Bearer ${loginRes?.data?.access_token}`,
+    };
   }
   // console.log(headers);
   return fetch(url, {
