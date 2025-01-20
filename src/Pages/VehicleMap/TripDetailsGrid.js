@@ -4,6 +4,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons'; // Import Material I
 import {HEIGHT, WIDTH} from '../../constants/config';
 import {BOLD} from '../../constants/fontfamily';
 import {RFValue} from 'react-native-responsive-fontsize';
+import LinearGradient from 'react-native-linear-gradient'; // Import LinearGradient
 
 const TripDetailsGrid = ({data}) => {
   const countAll = data?.data?.things.length || 0; // Total count of all things
@@ -13,27 +14,37 @@ const TripDetailsGrid = ({data}) => {
     ).length || 0; // Count of 'STOPPED' status
 
   const statusData = [
-    {id: '1', status: 'All', backgroundColor: '#007BFF', data: data?.count}, // Bright Blue
-    {id: '2', status: 'Running', backgroundColor: '#28A745'}, // Dark Green
-    {id: '3', status: 'Idle', backgroundColor: '#FFC107'}, // Amber
+    {
+      id: '1',
+      status: 'All',
+      backgroundColor: ['#007BFF', '#1a73e8'],
+      data: data?.count,
+    }, // Bright Blue gradient
+    {id: '2', status: 'Running', backgroundColor: ['#28A745', '#1dbe46']}, // Dark Green gradient
+    {id: '3', status: 'Idle', backgroundColor: ['#FFC107', '#ffbb33']}, // Amber gradient
     {
       id: '4',
       status: 'Stopped',
-      backgroundColor: '#DC3545',
+      backgroundColor: ['#DC3545', '#e02e2e'],
       data: countStopped,
-    }, // Dark Red
-    {id: '5', status: 'Overspeed', backgroundColor: '#FD7E14'}, // Deep Orange
-    {id: '6', status: 'Unreachable', backgroundColor: '#6C757D'}, // Gray
+    }, // Dark Red gradient
+    {id: '5', status: 'Overspeed', backgroundColor: ['#FD7E14', '#ff6a00']}, // Deep Orange gradient
+    {id: '6', status: 'Unreachable', backgroundColor: ['#6C757D', '#5a6268']}, // Gray gradient
   ];
-  //   console.log('data', data);
+
   const renderItem = ({item}) => (
-    <View style={[styles.statusCard, {backgroundColor: item.backgroundColor}]}>
+    <LinearGradient
+      colors={item.backgroundColor} // Apply gradient colors
+      style={styles.statusCard}
+      start={{x: 0, y: 0}} // Gradient starts from top-left corner
+      end={{x: 1, y: 1}} // Gradient ends at bottom-right corner
+    >
       <Icon name="directions-car" size={35} color="white" />
       <View style={{marginTop: 5}}>
         <Text style={styles.statusText}>{item.status}</Text>
         <Text style={styles.statusText1}>{item.data}</Text>
       </View>
-    </View>
+    </LinearGradient>
   );
 
   return (

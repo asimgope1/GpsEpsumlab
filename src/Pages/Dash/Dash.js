@@ -21,7 +21,7 @@ import {HEIGHT, WIDTH} from '../../constants/config';
 import {clearAll} from '../../utils/Storage';
 import {checkuserToken} from '../../redux/actions/auth';
 import {useDispatch} from 'react-redux';
-import {GETNETWORK} from '../../utils/Network';
+import {GETNETWORK, POSTNETWORK} from '../../utils/Network';
 import {BASE_URL, ws_baseurl} from '../../constants/url';
 import TripDetailsGrid from '../VehicleMap/TripDetailsGrid';
 import {BLACK} from '../../constants/color';
@@ -29,6 +29,7 @@ import {RFValue} from 'react-native-responsive-fontsize';
 import moment from 'moment';
 import {useNavigation} from '@react-navigation/native';
 import Track from '../Track/Track';
+import LinearGradient from 'react-native-linear-gradient';
 
 const Dash = ({}) => {
   const [vehicleData, setVehicleData] = useState([]);
@@ -38,110 +39,17 @@ const Dash = ({}) => {
   const [History, setHistory] = useState(false); // History state
   const [selectedValue, setSelectedValue] = useState({});
   const [Location, setLocation] = useState([]); // Location state
+  const [datalog, setDatalog] = useState([]);
   const [data, setData] = useState();
   const navigation = useNavigation();
   const Dispatch = useDispatch();
   const [showMap, setShowMap] = React.useState(false);
+  const [showTrack, setShowTrack] = React.useState([]);
   const websocket = useRef(null);
+  const [User, setUser] = useState([]);
 
   const handleClose = () => {
     setShowMap(false); // Hide the map when close button is pressed
-  };
-
-  useEffect(() => {
-    GetDerivedData();
-  }, [History]); // Only run once when the component mounts
-
-  const GetDerivedData = () => {
-    const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
-
-    // Fetch data from the API
-    GETNETWORK(Url, true)
-      .then(response => {
-        // console.log('response.dataresponse.data', response.data.things);
-        setLoading(false); // Set loading to false once the data is fetched
-        if (response.data && response.data.things) {
-          setData(response); // Set data dynamically from the API response
-          setVehicleData(response.data.things); // Set data dynamically from the API response
-        } else {
-          setError('No data available');
-        }
-      })
-      .catch(error => {
-        setLoading(false);
-        setError('Failed to fetch data');
-        console.error('Error fetching data: ', error);
-      });
-  };
-
-  const connectWebSocket = thingid => {
-    const WEBSOCKET_URL = `${ws_baseurl}/thing/r/${thingid}/`;
-    console.log('Connecting to WebSocket:', WEBSOCKET_URL); // Log WebSocket URL
-
-    websocket.current = new WebSocket(WEBSOCKET_URL);
-
-    websocket.current.onopen = () => {
-      console.log('WebSocket connected:'); // Log connection success
-    };
-
-    websocket.current.onmessage = onMessage;
-    websocket.current.onclose = onClose;
-    websocket.current.onerror = onError;
-  };
-
-  const onMessage = event => {
-    console.log('Message received:', event.data); // Log raw message data
-
-    try {
-      // Attempt to parse the incoming message data
-      const json_data = JSON.parse(event.data);
-      console.log('Parsed data:', json_data); // Log parsed JSON data
-
-      const body = json_data.message;
-      if (!body) {
-        console.error('Message body is undefined or malformed');
-        return;
-      }
-
-      const data = body.values;
-      const timestamp = body.timestamp;
-
-      // Ensure the data and timestamp are valid before proceeding
-      if (!data || !timestamp) {
-        console.error('Invalid data or timestamp');
-        return;
-      }
-
-      // Update datalog with new entries
-      const updatedDatalog = datalog.map((entry, index) => {
-        const newEntry = {
-          xaxis: timestamp,
-          [schema[index]?.name]: data[index], // Safely access schema values
-        };
-        return [...entry, newEntry];
-      });
-
-      console.log('Updated datalog:', updatedDatalog); // Log the updated datalog
-
-      // Optionally, update state variables for derived values and other data
-      // setderived_values(body.derived_values);
-      // setDatalog(updatedDatalog);
-      // setCurrValues(data);
-      // setDatalogdata(timestamp);
-    } catch (error) {
-      // Log any error during message processing
-      console.error('Error processing onMessage:', error);
-    }
-  };
-
-  // WebSocket close event handler
-  const onClose = event => {
-    console.log('WebSocket closed:', event.code, event.reason);
-  };
-
-  // WebSocket error event handler
-  const onError = event => {
-    console.error('WebSocket error:', event.message);
   };
 
   const GetSelectedVehicle = item => {
@@ -165,6 +73,174 @@ const Dash = ({}) => {
       });
   };
 
+  useEffect(() => {
+    GetDerivedData();
+    GetUser();
+  }, [History]); // Only run once when the component mounts
+
+  const GetDerivedData = () => {
+    const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
+
+    // Fetch data from the API
+    GETNETWORK(Url, true)
+      .then(response => {
+        console.log('response.dataresponse.data', response.data.things);
+        setLoading(false); // Set loading to false once the data is fetched
+        if (response.data && response.data.things) {
+          setData(response); // Set data dynamically from the API response
+          setVehicleData(response.data.things); // Set data dynamically from the API response
+        } else {
+          setError('No data available');
+        }
+      })
+      .catch(error => {
+        setLoading(false);
+        setError('Failed to fetch data');
+        console.error('Error fetching data: ', error);
+      });
+  };
+
+  const mapApi = async id => {
+    const url = `${BASE_URL}things/datalog/`;
+
+    // Get today's date in 'YYYY-MM-DD' format
+    const today = new Date();
+    const todayDate = today.toISOString().split('T')[0]; // Extract the date portion
+
+    const payload = {
+      from_date: todayDate, // Use today's date
+      project: '117',
+      thing_id: id,
+      to_date: todayDate, // Use today's date for "to_date" as well
+    };
+
+    try {
+      const response = await POSTNETWORK(url, payload, true); // Pass true for token-based auth
+
+      if (response?.data?.length > 0) {
+        // Get the last element from the array
+        const latestData = response.data[response.data.length - 1];
+
+        // Extract relevant details
+        const {derived_data, timestamp} = latestData;
+        const {
+          location,
+          speed,
+          status,
+          today_distance,
+          total_distance,
+          acceleration,
+        } = derived_data;
+
+        // Update state or variables with the latest details, including the timestamp
+        const vehicleDetails = {
+          location: {latitude: location[0], longitude: location[1]},
+          speed,
+          status,
+          current_distance: today_distance,
+          total_distance: total_distance,
+          generated_datetime: timestamp, // Add the timestamp
+          acceleration,
+        };
+
+        console.log('Updated Vehicle Details:', vehicleDetails);
+        console.log('selected Vehicle Details:', selectedValue);
+        setSelectedValue(vehicleDetails);
+
+        // Update the polyline state
+        const locationData = response.data.map(item => {
+          const [lat, lon] = item.derived_data.location; // Extract latitude and longitude
+          return {latitude: lat, longitude: lon};
+        });
+
+        setShowTrack(locationData); // Pass location data to the state for rendering
+      } else {
+        console.log('No data available for the selected date.');
+      }
+    } catch (error) {
+      console.error('Error calling API:', error);
+    }
+  };
+
+  const connectWebSocket = thingid => {
+    const WEBSOCKET_URL = `${ws_baseurl}/thing/r/${thingid}/`;
+    console.log('Connecting to WebSocket:', WEBSOCKET_URL); // Log WebSocket URL
+
+    websocket.current = new WebSocket(WEBSOCKET_URL);
+
+    websocket.current.onopen = () => {
+      console.log('WebSocket connected:'); // Log connection success
+    };
+
+    websocket.current.onmessage = onMessage;
+    websocket.current.onclose = onClose;
+    websocket.current.onerror = onError;
+  };
+
+  const onMessage = event => {
+    try {
+      // Parse the incoming message
+      const json_data = JSON.parse(event.data);
+      console.log('Parsed data:', json_data);
+      console.log('Parse:', json_data?.message);
+
+      const body = json_data.message;
+      if (!body) {
+        console.error('Message body is undefined or malformed');
+        return;
+      }
+
+      const data = body.values;
+      const timestamp = body.timestamp;
+
+      // Ensure the data and timestamp are valid
+      if (!data || !timestamp) {
+        console.error('Invalid data or timestamp');
+        return;
+      }
+
+      // Safely update the datalog state
+      setDatalog(prevDatalog =>
+        prevDatalog.map((entry, index) => {
+          const newEntry = {
+            xaxis: timestamp,
+            [schema[index]?.name]: data[index],
+          };
+          return [...entry, newEntry];
+        }),
+      );
+
+      console.log('Updated datalog:', datalog);
+    } catch (error) {
+      console.error('Error processing onMessage:', error);
+    }
+  };
+
+  // WebSocket close event handler
+  const onClose = event => {
+    console.log('WebSocket closed:', event.code, event.reason);
+  };
+
+  // WebSocket error event handler
+  const onError = event => {
+    console.error('WebSocket error:', event.message);
+  };
+
+  const GetUser = async () => {
+    const url = `${BASE_URL}user/profile/`;
+
+    try {
+      const response = await GETNETWORK(url, true); // Use GETNETWORK with token-based auth
+      console.log(
+        'Response from API:',
+        response.data.organisation[0]?.org_logo_path,
+      );
+      setUser(response?.data);
+    } catch (error) {
+      console.error('Error calling API:', error);
+    }
+  };
+
   const renderLoading = () => (
     <SafeAreaView style={styles.loadingContainer}>
       <Text>Loading...</Text>
@@ -179,10 +255,11 @@ const Dash = ({}) => {
 
   const renderVehicleCard = ({item}) => (
     <TouchableOpacity
+      activeOpacity={0.9}
       onPress={() => {
-        // console.log('itemmm', item);
         GetSelectedVehicle(item.thing_id);
         connectWebSocket(item.thing_id);
+        mapApi(item.thing_id);
 
         setHistory(true);
         setShowModal(true);
@@ -348,7 +425,13 @@ const Dash = ({}) => {
   return (
     <>
       <StatusBar barStyle="light-content" backgroundColor="#316163" />
-      <SafeAreaView style={{flex: 1, backgroundColor: '#316163'}}>
+      <LinearGradient
+        colors={['#316163', '#4db6b3']} // Light pink to dark red gradient
+        style={{flex: 1}}
+        start={{x: 0, y: 0}} // Start from top-left corner
+        end={{x: 1, y: 1}} // End at bottom-right corner
+        locations={[0, 1]} // Gradient stops
+      >
         <KeyboardAvoidingView
           style={{flex: 1}}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -358,35 +441,42 @@ const Dash = ({}) => {
               flexDirection: 'row',
               justifyContent: 'space-between',
               alignItems: 'center',
-              width: '95%',
+              width: '99%',
+              // elevation: 25,
+
+              // elevation: 5,
               paddingVertical: 25,
               paddingHorizontal: 10,
-              //   backgroundColor: 'gry',
+              // backgroundColor: '#4db6b3',
               alignSelf: 'center',
-              shadowColor: '#000',
-              shadowOffset: {width: 0, height: 2},
-              shadowOpacity: 0.25,
-              shadowRadius: 3.5,
-              borderRadius: 8,
+              // shadowColor: '#000',
+              // shadowOffset: {width: 0, height: 2},
+              // shadowOpacity: 0.25,
+              // shadowRadius: 3.5,
+              // borderRadius: 8,
             }}>
             <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              <Avatar
-                size="medium"
-                rounded
-                source={{
-                  uri: 'https://randomuser.me/api/portraits/men/1.jpg',
-                }}
-              />
+              {User && (
+                <Avatar
+                  size="medium"
+                  rounded
+                  source={{
+                    uri: 'https://randomuser.me/api/portraits/men/1.jpg',
+                  }}
+                />
+              )}
               <Text
                 style={{
                   color: 'white',
-                  fontWeight: 'bold',
+                  // fontWeight: 'bold',
+                  fontFamily: BOLD,
                   fontSize: 15,
                   marginLeft: 10,
                 }}>
-                Welcome, User Name!
+                Welcome, {User?.name}
                 {'\n'}
-                Last login: 2022-03-15 10:30 AM
+                Last login:{' '}
+                {moment(User?.last_active).format('DD/MM/YYYY h:mm a')}
               </Text>
             </View>
             <Icon
@@ -394,7 +484,7 @@ const Dash = ({}) => {
                 clearAll();
                 Dispatch(checkuserToken());
               }}
-              name="notifications"
+              name="logout"
               type="AntDesign"
               color="white"
               size={25}
@@ -425,7 +515,7 @@ const Dash = ({}) => {
                   shadowOffset: {width: 0, height: 2},
                   shadowOpacity: 0.25,
                   shadowRadius: 3.5,
-                  elevation: 5,
+                  // elevation: 5,
                   flex: 1,
                 }}>
                 {/* Display content */}
@@ -464,6 +554,7 @@ const Dash = ({}) => {
         Location[1] !== undefined ? (
           <View style={{flex: 1}}>
             <Track
+              showTrack={showTrack}
               latitude={Location[0]} // Pass the latitude value
               longitude={Location[1]} // Pass the longitude value
               onClose={handleClose} // Handle close functionality
@@ -639,7 +730,7 @@ const Dash = ({}) => {
             </View>
           </View>
         </Modal>
-      </SafeAreaView>
+      </LinearGradient>
     </>
   );
 };
@@ -666,7 +757,7 @@ const styles = StyleSheet.create({
 
   cardContainer: {
     width: WIDTH * 0.93,
-    height: HEIGHT * 0.39,
+    height: HEIGHT * 0.38,
     alignSelf: 'center',
     backgroundColor: '#F7F7F7',
     borderRadius: 10,

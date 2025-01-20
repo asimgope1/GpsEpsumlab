@@ -9,11 +9,13 @@ export const POSTNETWORK = async (
     Accept: 'application/json',
     'Content-Type': content ? 'multipart/form-data' : 'application/json',
   };
+
+  console.log('url, payload, token', url, payload, token);
   if (token) {
     let loginRes = await getObjByKey('loginResponse');
     headers = {
       ...headers,
-      Authorization: `Token ${loginRes?.data?.access_token}`,
+      Authorization: `Bearer ${loginRes?.data?.access_token}`,
     };
   }
   // console.log('HEADERS: ', headers);
@@ -71,7 +73,7 @@ export const GETNETWORK = async (url, token = false) => {
 
   if (token) {
     let loginRes = await getObjByKey('loginResponse');
-    // console.log(loginRes);
+    console.log(loginRes);
     headers = {
       ...headers,
       Authorization: `Bearer ${loginRes?.data?.access_token}`,
