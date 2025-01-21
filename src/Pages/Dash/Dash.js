@@ -30,6 +30,7 @@ import moment from 'moment';
 import {useNavigation} from '@react-navigation/native';
 import Track from '../Track/Track';
 import LinearGradient from 'react-native-linear-gradient';
+import HistoryModal from '../History/HistoryModal';
 
 const Dash = ({}) => {
   const [vehicleData, setVehicleData] = useState([]);
@@ -37,9 +38,10 @@ const Dash = ({}) => {
   const [loading, setLoading] = useState(true); // Loading state
   const [error, setError] = useState(null); // Error state
   const [History, setHistory] = useState(false); // History state
+  const [viewHistory, setViewHistory] = useState(false); //
   const [selectedValue, setSelectedValue] = useState({});
   const [Location, setLocation] = useState([]); // Location state
-  const [datalog, setDatalog] = useState([]);
+  const [datalog, setDatalog] = useState({});
   const [data, setData] = useState();
   const navigation = useNavigation();
   const Dispatch = useDispatch();
@@ -47,6 +49,21 @@ const Dash = ({}) => {
   const [showTrack, setShowTrack] = React.useState([]);
   const websocket = useRef(null);
   const [User, setUser] = useState([]);
+  const [dates, setDates] = useState({fromDate: '', toDate: ''});
+  const [Log, SetLog] = useState();
+
+  const vehicleDat = {
+    speed: '80 km/h',
+    status: 'Active',
+    acceleration: '2.5 m/s²',
+    todayDistance: '50 km',
+    totalDistance: '5000 km',
+    currentDistance: '20 km',
+    lastUpdated: '1 min ago',
+  };
+  const handleDateSelect = (type, date) => {
+    setDates(prev => ({...prev, [type]: date}));
+  };
 
   const handleClose = () => {
     setShowMap(false); // Hide the map when close button is pressed
@@ -76,7 +93,7 @@ const Dash = ({}) => {
   useEffect(() => {
     GetDerivedData();
     GetUser();
-  }, [History]); // Only run once when the component mounts
+  }, []); // Only run once when the component mounts
 
   const GetDerivedData = () => {
     const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
@@ -120,7 +137,6 @@ const Dash = ({}) => {
       if (response?.data?.length > 0) {
         // Get the last element from the array
         const latestData = response.data[response.data.length - 1];
-
         // Extract relevant details
         const {derived_data, timestamp} = latestData;
         const {
@@ -182,35 +198,34 @@ const Dash = ({}) => {
       // Parse the incoming message
       const json_data = JSON.parse(event.data);
       console.log('Parsed data:', json_data);
-      console.log('Parse:', json_data?.message);
 
-      const body = json_data.message;
-      if (!body) {
-        console.error('Message body is undefined or malformed');
-        return;
-      }
+      // Extract derived values from the message
+      const {derived_values, timestamp} = json_data?.message || {};
+      const {
+        location,
+        speed,
+        status,
+        today_distance,
+        total_distance,
+        acceleration,
+      } = derived_values || {};
 
-      const data = body.values;
-      const timestamp = body.timestamp;
+      // Update the datalog state with the extracted data
+      const updatedDatalog = {
+        location: {latitude: location[0], longitude: location[1]},
+        speed,
+        status,
+        current_distance: today_distance,
+        total_distance: total_distance,
+        generated_datetime: timestamp,
+        acceleration,
+      };
 
-      // Ensure the data and timestamp are valid
-      if (!data || !timestamp) {
-        console.error('Invalid data or timestamp');
-        return;
-      }
+      // Log the updated datalog for debugging
+      console.log('Updated datalog:', updatedDatalog);
 
-      // Safely update the datalog state
-      setDatalog(prevDatalog =>
-        prevDatalog.map((entry, index) => {
-          const newEntry = {
-            xaxis: timestamp,
-            [schema[index]?.name]: data[index],
-          };
-          return [...entry, newEntry];
-        }),
-      );
-
-      console.log('Updated datalog:', datalog);
+      // Set the updated datalog state
+      setDatalog(updatedDatalog);
     } catch (error) {
       console.error('Error processing onMessage:', error);
     }
@@ -260,6 +275,7 @@ const Dash = ({}) => {
         GetSelectedVehicle(item.thing_id);
         connectWebSocket(item.thing_id);
         mapApi(item.thing_id);
+        SetLog(item.thing_id);
 
         setHistory(true);
         setShowModal(true);
@@ -546,7 +562,6 @@ const Dash = ({}) => {
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-
         {showMap &&
         Array.isArray(Location) &&
         Location.length > 0 &&
@@ -568,7 +583,6 @@ const Dash = ({}) => {
             [{text: 'OK'}],
           )
         )}
-
         <Modal
           animationType="slide"
           transparent={true}
@@ -584,14 +598,16 @@ const Dash = ({}) => {
                 <View style={styles.headerActions}>
                   <TouchableOpacity
                     onPress={() => {
-                      setHistory(true);
+                      // setHistory(true);
+                      setViewHistory(true);
+                      // navigation.navigate('History');
                       //   console.log('History pressed');
                     }}>
                     <Text
                       style={{
                         ...styles.headerButton,
-                        color: History == true ? 'grey' : '#316163',
-                        fontSize: History == true ? RFValue(13) : '',
+                        color: '#316163',
+                        fontSize: RFValue(12),
                       }}>
                       History
                     </Text>
@@ -605,7 +621,7 @@ const Dash = ({}) => {
                   </TouchableOpacity>
                   <TouchableOpacity
                     onPress={() => {
-                      setHistory(false);
+                      setViewHistory(false);
                       setShowModal(false);
                     }}>
                     <Text style={styles.headerButton}>Close</Text>
@@ -730,6 +746,13 @@ const Dash = ({}) => {
             </View>
           </View>
         </Modal>
+        <HistoryModal
+          visible={viewHistory}
+          onClose={() => setViewHistory(false)}
+          onDateSelect={handleDateSelect}
+          vehicleData={vehicleDat}
+          log={Log}
+        />
       </LinearGradient>
     </>
   );
