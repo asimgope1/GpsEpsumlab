@@ -51,6 +51,7 @@ const Dash = ({}) => {
   const [User, setUser] = useState([]);
   const [dates, setDates] = useState({fromDate: '', toDate: ''});
   const [Log, SetLog] = useState();
+  const [refreshFlag, setRefreshFlag] = useState({});
 
   const vehicleDat = {
     speed: '80 km/h',
@@ -90,6 +91,34 @@ const Dash = ({}) => {
       });
   };
 
+  // const GetSelectedVehicle = item => {
+  //   const Url = `${BASE_URL}things/?thing_id=${item}&project_id=117`;
+
+  //   GETNETWORK(Url, true)
+  //     .then(response => {
+  //       if (response.data && response.data.derived_live_config) {
+  //         const updatedData = response.data.derived_live_config;
+
+  //         // Update selected vehicle data and location separately
+  //         setSelectedValue(prevState => ({
+  //           ...prevState, // Spread previous state to retain other properties
+  //           ...updatedData, // Update with new data
+  //         }));
+
+  //         setLocation(updatedData.location); // Ensure location is updated
+  //         setLoading(false);
+  //       } else {
+  //         setLoading(false);
+  //         setError('No vehicle data available');
+  //       }
+  //     })
+  //     .catch(error => {
+  //       setLoading(false);
+  //       setError('Failed to fetch data');
+  //       console.error('Error fetching data: ', error);
+  //     });
+  // };
+
   useEffect(() => {
     GetDerivedData();
     GetUser();
@@ -104,7 +133,6 @@ const Dash = ({}) => {
         console.log('response.dataresponse.data', response.data.things);
         setLoading(false); // Set loading to false once the data is fetched
         if (response.data && response.data.things) {
-          setData(response); // Set data dynamically from the API response
           setVehicleData(response.data.things); // Set data dynamically from the API response
         } else {
           setError('No data available');
@@ -117,27 +145,56 @@ const Dash = ({}) => {
       });
   };
 
+  const handleRefresh = async id => {
+    // Check if the vehicle is already refreshing to avoid multiple refreshes
+    if (refreshFlag[id]) return;
+
+    // Set the flag to true for the specific vehicle to indicate it's refreshing
+    setRefreshFlag(prev => ({
+      ...prev,
+      [id]: true, // Mark vehicle as refreshing
+    }));
+
+    try {
+      // Call the mapApi for the specific vehicle
+      await mapApi(id); // Wait for the API call to complete
+
+      // Update the refresh flag to false once the data is fetched
+      setRefreshFlag(prev => ({
+        ...prev,
+        [id]: false, // Reset flag after refresh is complete
+      }));
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      // Reset the flag in case of an error
+      setRefreshFlag(prev => ({
+        ...prev,
+        [id]: false, // Reset refresh flag on error
+      }));
+    }
+  };
+
   const mapApi = async id => {
     const url = `${BASE_URL}things/datalog/`;
 
-    // Get today's date in 'YYYY-MM-DD' format
     const today = new Date();
     const todayDate = today.toISOString().split('T')[0]; // Extract the date portion
 
     const payload = {
-      from_date: todayDate, // Use today's date
+      from_date: todayDate,
       project: '117',
       thing_id: id,
-      to_date: todayDate, // Use today's date for "to_date" as well
+      to_date: todayDate,
     };
 
     try {
-      const response = await POSTNETWORK(url, payload, true); // Pass true for token-based auth
+      const response = await POSTNETWORK(url, payload, true);
+
+      // Log the raw API response data
+      console.log('API response:', response);
 
       if (response?.data?.length > 0) {
-        // Get the last element from the array
         const latestData = response.data[response.data.length - 1];
-        // Extract relevant details
         const {derived_data, timestamp} = latestData;
         const {
           location,
@@ -148,28 +205,42 @@ const Dash = ({}) => {
           acceleration,
         } = derived_data;
 
-        // Update state or variables with the latest details, including the timestamp
+        // Log the individual derived_data values
+        console.log('Derived Data:', derived_data);
+        console.log('today_distance:', today_distance);
+        console.log('total_distance:', total_distance);
+        console.log('location:', location);
+        console.log('speed:', speed);
+        console.log('status:', status);
+        console.log('acceleration:', acceleration);
+
+        // Handle potential NaN for today_distance
+        const currentDistance = isNaN(today_distance) ? 0 : today_distance;
+
         const vehicleDetails = {
           location: {latitude: location[0], longitude: location[1]},
           speed,
           status,
-          current_distance: today_distance,
-          total_distance: total_distance,
-          generated_datetime: timestamp, // Add the timestamp
+          current_distance: currentDistance, // Ensure it's valid
+          total_distance,
+          generated_datetime: timestamp,
           acceleration,
         };
 
-        console.log('Updated Vehicle Details:', vehicleDetails);
-        console.log('selected Vehicle Details:', selectedValue);
+        // Log the updated vehicle details
+        console.log('Updated vehicle details:', vehicleDetails);
+
+        // Update the selected value
         setSelectedValue(vehicleDetails);
 
-        // Update the polyline state
-        const locationData = response.data.map(item => {
-          const [lat, lon] = item.derived_data.location; // Extract latitude and longitude
-          return {latitude: lat, longitude: lon};
-        });
-
-        setShowTrack(locationData); // Pass location data to the state for rendering
+        // Update the vehicle data
+        setVehicleData(prevData =>
+          prevData.map(item =>
+            item.thing_id === id
+              ? {...item, derived_live_config: vehicleDetails}
+              : item,
+          ),
+        );
       } else {
         console.log('No data available for the selected date.');
       }
@@ -276,7 +347,6 @@ const Dash = ({}) => {
         connectWebSocket(item.thing_id);
         mapApi(item.thing_id);
         SetLog(item.thing_id);
-
         setHistory(true);
         setShowModal(true);
       }}
@@ -310,6 +380,32 @@ const Dash = ({}) => {
             </View>
           </View>
           <View style={styles.row}>
+            <View>
+              <TouchableOpacity
+                style={{
+                  backgroundColor: 'red',
+                  alignItems: 'center',
+                  borderRadius: 5,
+                  paddingHorizontal: 5,
+                  paddingVertical: 3,
+                  marginHorizontal: 10,
+                }}
+                onPress={() => {
+                  handleRefresh(item.thing_id);
+                  GetSelectedVehicle(item.thing_id);
+                  connectWebSocket(item.thing_id);
+                  mapApi(item.thing_id);
+                  SetLog(item.thing_id);
+                  setHistory(true);
+                }}>
+                <Icon
+                  name="sync" // Use "sync" for the rotate icon in FontAwesome5
+                  color="white"
+                  size={23}
+                />
+              </TouchableOpacity>
+            </View>
+
             <Text style={styles.cardLabel}>Vehicle No: </Text>
             <Text style={styles.cardValue}>
               {item.properties.default_properties.vehicle_no}
@@ -346,7 +442,10 @@ const Dash = ({}) => {
             <Text style={{...styles.cardLabel}}>Status: </Text>
           </View>
           <Text style={{...styles.cardValue}}>
-            {item.derived_live_config.status}
+            {/* {item.derived_live_config.status} */}
+            {refreshFlag[item.thing_id]
+              ? 'Refreshing...'
+              : item.derived_live_config.status}
           </Text>
         </View>
         <View style={styles.row}>
@@ -378,7 +477,13 @@ const Dash = ({}) => {
             <Text style={styles.cardLabel}>Acc: </Text>
           </View>
           <Text style={styles.cardValue}>
-            {item?.derived_live_config?.acceleration?.toFixed(2)} m/s²
+            {/* {item?.derived_live_config?.acceleration?.toFixed(2)} m/s² */}
+            {/* {selectedValue?.acceleration?.toFixed(2) ?? 'N/A'} m/s² */}
+            {refreshFlag[item.thing_id]
+              ? 'N/A'
+              : item?.derived_live_config?.acceleration?.toFixed(2) ??
+                'N/A'}{' '}
+            m/s²
           </Text>
         </View>
         <View style={styles.row}>
@@ -410,7 +515,8 @@ const Dash = ({}) => {
         />
         <Text style={styles.cardLabel}>Total Dist: </Text>
         <Text style={styles.cardValue}>
-          {item.derived_live_config.total_distance?.toFixed(2) / 1000} km
+          {/* {item.derived_live_config.total_distance?.toFixed(2) / 1000} km */}
+          {(item.derived_live_config.total_distance / 1000).toFixed(2)} km
         </Text>
       </View>
 
@@ -428,7 +534,15 @@ const Dash = ({}) => {
             <Text style={styles.cardLabel}>Current Dist: </Text>
           </View>
           <Text style={styles.cardValue}>
-            {item.derived_live_config.current_distance?.toFixed(2) / 1000} km
+            {/* {item.derived_live_config.current_distance?.toFixed(2) / 1000} km */}
+            {/* {selectedValue?.current_distance
+              ? (selectedValue?.current_distance / 1000).toFixed(2)
+              : 'N/A'}{' '}
+            km */}
+            {refreshFlag[item.thing_id]
+              ? 'Refreshing...' // Show "Refreshing..." during refresh
+              : (item.derived_live_config.today_distance / 1000).toFixed(2) +
+                ' km'}
           </Text>
         </View>
       </View>
@@ -691,8 +805,9 @@ const Dash = ({}) => {
                       <Text style={styles.detailLabel}>Total Dist: </Text>
                     </View>
                     <Text style={styles.detailValue}>
-                      {selectedValue?.total_distance?.toFixed(2) / 1000 ??
-                        'N/A'}{' '}
+                      {selectedValue?.total_distance
+                        ? (selectedValue.total_distance / 1000).toFixed(2)
+                        : 'N/A'}{' '}
                       km
                     </Text>
                   </View>
@@ -716,8 +831,9 @@ const Dash = ({}) => {
                       <Text style={styles.detailLabel}>Current Dist: </Text>
                     </View>
                     <Text style={styles.detailValue}>
-                      {selectedValue?.current_distance?.toFixed(2) / 1000 ??
-                        'N/A'}{' '}
+                      {selectedValue?.current_distance
+                        ? (selectedValue?.current_distance / 1000).toFixed(2)
+                        : 'N/A'}{' '}
                       km
                     </Text>
                   </View>
@@ -780,11 +896,11 @@ const styles = StyleSheet.create({
 
   cardContainer: {
     width: WIDTH * 0.93,
-    height: HEIGHT * 0.38,
+    height: HEIGHT * 0.39,
     alignSelf: 'center',
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
-    padding: 12,
+    padding: 10,
     marginVertical: 8,
     marginHorizontal: 12,
     elevation: 4,
@@ -821,7 +937,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: 'black',
     fontFamily: REGULAR,
-    // marginLeft: 8,
+    // marginLeft: 8
   },
   modalOverlay: {
     flex: 1,
@@ -830,17 +946,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(100, 100, 100, 0.5)',
   },
   modalCard: {
-    width: '90%',
+    width: '92%',
     backgroundColor: '#fff',
     borderRadius: 10,
-    padding: 16,
+    padding: 15,
     elevation: 5,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 5,
   },
   modalTitle: {
     fontSize: 18,
