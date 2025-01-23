@@ -12,6 +12,7 @@ import {
   Modal,
   StyleSheet,
   ActivityIndicator,
+  RefreshControl,
   Alert,
 } from 'react-native';
 import React, {useState, useEffect, useRef} from 'react';
@@ -31,6 +32,8 @@ import {useNavigation} from '@react-navigation/native';
 import Track from '../Track/Track';
 import LinearGradient from 'react-native-linear-gradient';
 import HistoryModal from '../History/HistoryModal';
+import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {Loader} from '../../components/Loader';
 
 const Dash = ({}) => {
   const [vehicleData, setVehicleData] = useState([]);
@@ -42,7 +45,7 @@ const Dash = ({}) => {
   const [selectedValue, setSelectedValue] = useState({});
   const [Location, setLocation] = useState([]); // Location state
   const [datalog, setDatalog] = useState({});
-  const [data, setData] = useState();
+
   const navigation = useNavigation();
   const Dispatch = useDispatch();
   const [showMap, setShowMap] = React.useState(false);
@@ -51,25 +54,42 @@ const Dash = ({}) => {
   const [User, setUser] = useState([]);
   const [dates, setDates] = useState({fromDate: '', toDate: ''});
   const [Log, SetLog] = useState();
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastTimestamp, setLastTimestamp] = useState(null);
+  const [initialData, setInitialData] = useState([]);
+  const [status, setStatus] = useState('');
+  const [latestData, setLatestData] = useState([]);
+  const [statusMap, setStatusMap] = useState({});
+  const [data, setData] = useState([]);
+  const [pageLoad, setPageLoad] = useState(false);
 
-  const vehicleDat = {
-    speed: '80 km/h',
-    status: 'Active',
-    acceleration: '2.5 m/s²',
-    todayDistance: '50 km',
-    totalDistance: '5000 km',
-    currentDistance: '20 km',
-    lastUpdated: '1 min ago',
-  };
+  // Fetch data at intervals
+  useEffect(() => {
+    const interval = setInterval(() => {
+      GetDerivedData();
+    }, 1000000); // Fetch every 10 seconds
+
+    return () => clearInterval(interval); // Clear interval on unmount
+  }, [initialData]); // Depend on `initialData` for updates
+
   const handleDateSelect = (type, date) => {
     setDates(prev => ({...prev, [type]: date}));
   };
-
+  const onRefresh = () => {
+    setRefreshing(true);
+    GetDerivedData();
+    // setRefreshing(false);
+    // setRefreshing(!refreshing); // Toggle refresh state
+    // if (refreshing) {
+    //   GetDerivedData();
+    // }
+  };
   const handleClose = () => {
     setShowMap(false); // Hide the map when close button is pressed
   };
 
   const GetSelectedVehicle = item => {
+    setPageLoad(true);
     const Url = `${BASE_URL}things/?thing_id=${item}&project_id=117`;
     // console.log('item GetSelectedVehicle', item);
 
@@ -84,6 +104,7 @@ const Dash = ({}) => {
         setLoading(false);
       })
       .catch(error => {
+        setPageLoad(false);
         setLoading(false);
         setError('Failed to fetch data');
         console.error('Error fetching data: ', error);
@@ -95,30 +116,95 @@ const Dash = ({}) => {
     GetUser();
   }, []); // Only run once when the component mounts
 
-  const GetDerivedData = () => {
-    const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
+  // useEffect(() => {
+  //   // GetDerivedData();
+  //   // GetUser();
+  //   const interval1 = setInterval(() => {
+  //     // GetDerivedData();
+  //     console.log('Checking vehicle status every first seconds...');
+  //   }, 10000);
+  //   const interval2 = setInterval(() => {
+  //     console.log('Checking vehicle status every 15 seconds...');
+  //   }, 15000);
+  //   const interval3 = setInterval(() => {
+  //     console.log('Performing another operation every 30 seconds...');
+  //   }, 30000);
+  //   return () => {
+  //     clearInterval(interval1);
+  //     clearInterval(interval2);
+  //     clearInterval(interval3);
+  //   };
+  // }, []);
 
-    // Fetch data from the API
-    GETNETWORK(Url, true)
-      .then(response => {
-        console.log('response.dataresponse.data', response.data.things);
-        setLoading(false); // Set loading to false once the data is fetched
-        if (response.data && response.data.things) {
-          setData(response); // Set data dynamically from the API response
-          setVehicleData(response.data.things); // Set data dynamically from the API response
-        } else {
-          setError('No data available');
-        }
-      })
-      .catch(error => {
-        setLoading(false);
-        setError('Failed to fetch data');
-        console.error('Error fetching data: ', error);
-      });
+  const GetDerivedData = async () => {
+    const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
+    setPageLoad(true);
+
+    try {
+      const response = await GETNETWORK(Url, true);
+      console.log('API response:', response.data.things);
+
+      setLoading(false);
+      setPageLoad(false);
+
+      if (response.data && response.data.things) {
+        const fetchedData = response.data.things.map(item => ({
+          thing_id: item.thing_id,
+          updated_on: new Date(item.updated_on), // Convert `updated_on` to Date object
+        }));
+
+        // Compare timestamps and determine status
+        setData(prevData => {
+          const currentTime = new Date();
+          const statusUpdates = {
+            Running: 0,
+            Stopped: 0,
+            Unreachable: 0,
+          };
+
+          fetchedData.forEach(latestItem => {
+            const {thing_id, updated_on} = latestItem;
+
+            // Calculate the time difference in minutes
+            const timeDifference = (currentTime - updated_on) / (1000 * 60); // Convert ms to minutes
+
+            if (timeDifference <= 2) {
+              statusUpdates[thing_id] = 'Running';
+              statusUpdates.Running += 1;
+            } else if (timeDifference > 2 && timeDifference <= 5) {
+              statusUpdates[thing_id] = 'Stopped';
+              statusUpdates.Stopped += 1;
+            } else {
+              statusUpdates[thing_id] = 'Unreachable';
+              statusUpdates.Unreachable += 1;
+            }
+          });
+
+          // console.log('Number of Unreachable Vehicles:', unreachableCount);
+          console.log('Vehicle Status Map:', statusUpdates);
+          setStatusMap(prev => ({...prev, ...statusUpdates}));
+
+          return fetchedData; // Update the latest data
+        });
+
+        setVehicleData(response.data.things); // Update vehicle data
+        setRefreshing(false); // Stop refreshing
+        setPageLoad(false);
+      } else {
+        setError('No data available');
+        setPageLoad(false);
+      }
+    } catch (error) {
+      setLoading(false);
+      setError('Failed to fetch data');
+      console.error('Error fetching data:', error);
+      setPageLoad(false);
+    }
   };
 
   const mapApi = async id => {
     const url = `${BASE_URL}things/datalog/`;
+    setPageLoad(true);
 
     // Get today's date in 'YYYY-MM-DD' format
     const today = new Date();
@@ -162,6 +248,7 @@ const Dash = ({}) => {
         console.log('Updated Vehicle Details:', vehicleDetails);
         console.log('selected Vehicle Details:', selectedValue);
         setSelectedValue(vehicleDetails);
+        setPageLoad(false);
 
         // Update the polyline state
         const locationData = response.data.map(item => {
@@ -180,6 +267,7 @@ const Dash = ({}) => {
 
   const connectWebSocket = thingid => {
     const WEBSOCKET_URL = `${ws_baseurl}/thing/r/${thingid}/`;
+    setPageLoad(true);
     console.log('Connecting to WebSocket:', WEBSOCKET_URL); // Log WebSocket URL
 
     websocket.current = new WebSocket(WEBSOCKET_URL);
@@ -194,6 +282,7 @@ const Dash = ({}) => {
   };
 
   const onMessage = event => {
+    setPageLoad(true);
     try {
       // Parse the incoming message
       const json_data = JSON.parse(event.data);
@@ -226,23 +315,28 @@ const Dash = ({}) => {
 
       // Set the updated datalog state
       setDatalog(updatedDatalog);
+      setPageLoad(false);
     } catch (error) {
       console.error('Error processing onMessage:', error);
+      setPageLoad(false);
     }
   };
 
   // WebSocket close event handler
   const onClose = event => {
     console.log('WebSocket closed:', event.code, event.reason);
+    setPageLoad(false);
   };
 
   // WebSocket error event handler
   const onError = event => {
     console.error('WebSocket error:', event.message);
+    setPageLoad(false);
   };
 
   const GetUser = async () => {
     const url = `${BASE_URL}user/profile/`;
+    setPageLoad(true);
 
     try {
       const response = await GETNETWORK(url, true); // Use GETNETWORK with token-based auth
@@ -289,20 +383,16 @@ const Dash = ({}) => {
               name="directions-car"
               type="MaterialIcons"
               color={
-                item.derived_live_config.status === 'STOPPED'
-                  ? '#DC3545'
-                  : item.derived_live_config.status === 'RUNNING'
+                statusMap[item.thing_id] === 'Running'
                   ? '#28A745'
-                  : item.derived_live_config.status === 'IDLE'
-                  ? '#FFC107'
-                  : item.derived_live_config.status === 'OVERSPEED'
-                  ? '#FD7E14'
-                  : item.derived_live_config.status === 'UNREACHABLE'
+                  : statusMap[item.thing_id] === 'Stopped'
+                  ? '#DC3545'
+                  : statusMap[item.thing_id] === 'Unreachable'
                   ? '#6C757D'
-                  : '#007BFF' // Default color for 'ALL' or unknown statuses
+                  : '#007BFF'
               }
               size={30}
-              style={{...styles.icon}}
+              style={styles.icon}
             />
 
             <View>
@@ -410,7 +500,7 @@ const Dash = ({}) => {
         />
         <Text style={styles.cardLabel}>Total Dist: </Text>
         <Text style={styles.cardValue}>
-          {item.derived_live_config.total_distance?.toFixed(2) / 1000} km
+          {(item.derived_live_config.total_distance / 1000).toFixed(2)} km
         </Text>
       </View>
 
@@ -428,7 +518,7 @@ const Dash = ({}) => {
             <Text style={styles.cardLabel}>Current Dist: </Text>
           </View>
           <Text style={styles.cardValue}>
-            {item.derived_live_config.current_distance?.toFixed(2) / 1000} km
+            {(item.derived_live_config.current_distance / 1000).toFixed(2)} km
           </Text>
         </View>
       </View>
@@ -506,62 +596,72 @@ const Dash = ({}) => {
               size={25}
             />
           </View>
-          <ScrollView
-            contentContainerStyle={{flexGrow: 1}}
-            scrollEnabled={true}>
-            <View style={{flex: 1, alignItems: 'center', width: '100%'}}>
-              <View
-                style={{
-                  height: HEIGHT * 0.5,
-                }}>
-                <TripDetailsGrid data={data} />
-              </View>
+          <GestureHandlerRootView>
+            <ScrollView
+              contentContainerStyle={{flexGrow: 1}}
+              scrollEnabled={true}>
+              <View style={{flex: 1, alignItems: 'center', width: '100%'}}>
+                <View
+                  style={{
+                    height: HEIGHT * 0.5,
+                  }}>
+                  <TripDetailsGrid data={statusMap} />
+                </View>
 
-              <View
-                style={{
-                  backgroundColor: '#C5CED3',
-                  paddingVertical: 15,
-                  paddingHorizontal: 10,
-                  borderTopRightRadius: 25,
-                  borderTopLeftRadius: 25,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: '100%',
-                  shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 2},
-                  shadowOpacity: 0.25,
-                  shadowRadius: 3.5,
-                  // elevation: 5,
-                  flex: 1,
-                }}>
-                {/* Display content */}
-                {loading ? (
-                  renderLoading()
-                ) : error ? (
-                  renderError()
-                ) : (
-                  <View
-                    style={{
-                      height: HEIGHT * 0.55,
-                      width: WIDTH * 0.95,
-                      alignSelf: 'center',
-                    }}>
-                    <FlatList
-                      nestedScrollEnabled={true}
-                      data={vehicleData}
-                      renderItem={renderVehicleCard}
-                      keyExtractor={(item, index) => index.toString()}
-                      contentContainerStyle={{
-                        width: '100%',
-                        paddingHorizontal: 10,
-                      }}
-                    />
-                  </View>
-                )}
+                <View
+                  style={{
+                    backgroundColor: '#C5CED3',
+                    paddingVertical: 15,
+                    paddingHorizontal: 10,
+                    borderTopRightRadius: 25,
+                    borderTopLeftRadius: 25,
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: '100%',
+                    shadowColor: '#000',
+                    shadowOffset: {width: 0, height: 2},
+                    shadowOpacity: 0.25,
+                    shadowRadius: 3.5,
+                    // elevation: 5,
+                    flex: 1,
+                  }}>
+                  {/* Display content */}
+                  {loading ? (
+                    renderLoading()
+                  ) : error ? (
+                    renderError()
+                  ) : (
+                    <View
+                      style={{
+                        height: HEIGHT * 0.55,
+                        width: WIDTH * 0.95,
+                        alignSelf: 'center',
+                      }}>
+                      <FlatList
+                        nestedScrollEnabled={true}
+                        data={vehicleData}
+                        renderItem={renderVehicleCard}
+                        keyExtractor={(item, index) => index.toString()}
+                        contentContainerStyle={{
+                          width: '100%',
+                          paddingHorizontal: 10,
+                        }}
+                        refreshControl={
+                          <RefreshControl
+                            refreshing={refreshing}
+                            onRefresh={onRefresh}
+                            colors={['black']}
+                          />
+                        }
+                      />
+                    </View>
+                  )}
+                </View>
               </View>
-            </View>
-          </ScrollView>
+            </ScrollView>
+          </GestureHandlerRootView>
         </KeyboardAvoidingView>
+
         {showMap &&
         Array.isArray(Location) &&
         Location.length > 0 &&
@@ -750,10 +850,11 @@ const Dash = ({}) => {
           visible={viewHistory}
           onClose={() => setViewHistory(false)}
           onDateSelect={handleDateSelect}
-          vehicleData={vehicleDat}
+          vehicleData={vehicleData}
           log={Log}
         />
       </LinearGradient>
+      <Loader visible={pageLoad} />
     </>
   );
 };
@@ -779,8 +880,8 @@ const styles = StyleSheet.create({
   },
 
   cardContainer: {
-    width: WIDTH * 0.93,
-    height: HEIGHT * 0.38,
+    width: WIDTH * 0.94,
+    height: HEIGHT * 0.4,
     alignSelf: 'center',
     backgroundColor: '#F7F7F7',
     borderRadius: 10,

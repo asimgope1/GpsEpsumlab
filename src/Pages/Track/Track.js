@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useState} from 'react';
 import {View, StyleSheet, TouchableOpacity, Modal} from 'react-native';
 import MapView, {Marker, Polyline, PROVIDER_GOOGLE} from 'react-native-maps';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -10,6 +10,8 @@ const Track = ({showTrack, latitude, longitude, visible, onClose}) => {
     latitudeDelta: 0.05, // Zoom level
     longitudeDelta: 0.05,
   };
+  const [startPoint, setStartPoint] = useState({});
+  const [endPoint, setEndPoint] = useState({});
 
   const mapRef = React.useRef();
 
@@ -20,8 +22,13 @@ const Track = ({showTrack, latitude, longitude, visible, onClose}) => {
         animated: true,
       });
     }
+    const points = showTrack;
+    setStartPoint(points[0]);
+    setEndPoint(points[points.length - 1]);
   }, [showTrack]);
+  console.log('jsaagggsssisugydggdud', showTrack[0]);
 
+  console.log('555555555555', startPoint);
   return (
     <Modal
       visible={visible}
@@ -47,11 +54,13 @@ const Track = ({showTrack, latitude, longitude, visible, onClose}) => {
                 coordinate={showTrack[0]}
                 title="Start Point"
                 pinColor="green"
+                description={`${startPoint.latitude},${endPoint.latitude}`}
               />
               <Marker
                 coordinate={showTrack[showTrack.length - 1]}
                 title="End Point"
                 pinColor="red"
+                description={`${endPoint.latitude},${endPoint.longitude}`}
               />
             </>
           )}

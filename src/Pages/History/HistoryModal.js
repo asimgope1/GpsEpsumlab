@@ -381,11 +381,4 @@ const styles = StyleSheet.create({
   },
 });
 
-HistoryModal.propTypes = {
-  visible: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired,
-  onDateSelect: PropTypes.func.isRequired,
-  log: PropTypes.object.isRequired,
-};
-
 export default HistoryModal;

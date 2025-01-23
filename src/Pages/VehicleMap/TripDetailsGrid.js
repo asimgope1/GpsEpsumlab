@@ -1,36 +1,91 @@
+import React, {useState, useEffect} from 'react';
 import {View, StyleSheet, FlatList, Text} from 'react-native';
-import React from 'react';
-import Icon from 'react-native-vector-icons/MaterialIcons'; // Import Material Icons
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import {HEIGHT, WIDTH} from '../../constants/config';
 import {BOLD} from '../../constants/fontfamily';
 import {RFValue} from 'react-native-responsive-fontsize';
-import LinearGradient from 'react-native-linear-gradient'; // Import LinearGradient
+import LinearGradient from 'react-native-linear-gradient';
 
 const TripDetailsGrid = ({data}) => {
-  const countAll = data?.data?.things.length || 0; // Total count of all things
-  const countStopped =
-    data?.data?.things.filter(
-      item => item.derived_live_config?.status === 'STOPPED',
-    ).length || 0; // Count of 'STOPPED' status
+  const [statusData, setStatusData] = useState([]);
 
-  const statusData = [
-    {
-      id: '1',
-      status: 'All',
-      backgroundColor: ['#007BFF', '#1a73e8'],
-      data: data?.count,
-    }, // Bright Blue gradient
-    {id: '2', status: 'Running', backgroundColor: ['#28A745', '#1dbe46']}, // Dark Green gradient
-    {id: '3', status: 'Idle', backgroundColor: ['#FFC107', '#ffbb33']}, // Amber gradient
-    {
-      id: '4',
-      status: 'Stopped',
-      backgroundColor: ['#DC3545', '#e02e2e'],
-      data: countStopped,
-    }, // Dark Red gradient
-    {id: '5', status: 'Overspeed', backgroundColor: ['#FD7E14', '#ff6a00']}, // Deep Orange gradient
-    {id: '6', status: 'Unreachable', backgroundColor: ['#6C757D', '#5a6268']}, // Gray gradient
-  ];
+  useEffect(() => {
+    // Initialize status counts
+    let runningCount = 0;
+    let idleCount = 0;
+    let stoppedCount = 0;
+    let overspeedCount = 0;
+    let unreachableCount = 0;
+
+    // Iterate through the data to count each status
+    Object.keys(data).forEach(key => {
+      const status = data[key];
+
+      switch (status) {
+        case 'Running':
+          runningCount += 1;
+          break;
+        case 'Idle':
+          idleCount += 1;
+          break;
+        case 'Stopped':
+          stoppedCount += 1;
+          break;
+        case 'Overspeed':
+          overspeedCount += 1;
+          break;
+        case 'Unreachable':
+          unreachableCount += 1;
+          break;
+        default:
+          break;
+      }
+    });
+
+    const totalActiveStatus = runningCount + stoppedCount + unreachableCount;
+
+    // Update the statusData with the calculated counts
+    const updatedStatusData = [
+      {
+        id: '1',
+        status: 'All',
+        backgroundColor: ['#007BFF', '#1a73e8'],
+        data: totalActiveStatus, // Total count of all things
+      },
+      {
+        id: '2',
+        status: 'Running',
+        backgroundColor: ['#28A745', '#1dbe46'],
+        data: runningCount, // Count of Running status
+      },
+      {
+        id: '3',
+        status: 'Idle',
+        backgroundColor: ['#FFC107', '#ffbb33'],
+        data: idleCount, // Count of Idle status
+      },
+      {
+        id: '4',
+        status: 'Stopped',
+        backgroundColor: ['#DC3545', '#e02e2e'],
+        data: stoppedCount, // Count of Stopped status
+      },
+      {
+        id: '5',
+        status: 'Overspeed',
+        backgroundColor: ['#FD7E14', '#ff6a00'],
+        data: overspeedCount, // Count of Overspeed status
+      },
+      {
+        id: '6',
+        status: 'Unreachable',
+        backgroundColor: ['#6C757D', '#5a6268'],
+        data: unreachableCount, // Count of Unreachable status
+      },
+    ];
+
+    setStatusData(updatedStatusData); // Update the state with the new status data
+  }, [data]); // Re-run when `data` prop changes
 
   const renderItem = ({item}) => (
     <LinearGradient

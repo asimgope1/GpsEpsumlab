@@ -13,38 +13,39 @@ import {
   ImageBackground,
   TouchableOpacity,
 } from 'react-native';
-import React, { Fragment, useEffect, useState } from 'react';
-import { BLACK, GREEN, GRAY, ORANGE, WHITE } from '../../constants/color';
+import React, {Fragment, useEffect, useState} from 'react';
+import {BLACK, GREEN, GRAY, ORANGE, WHITE} from '../../constants/color';
 import CustomButton from '../../components/CustomButton';
-import { loginStyles } from './LoginStyles';
-import { HEIGHT, MyStatusBar, WIDTH } from '../../constants/config';
-import { CustomTextInput } from '../../components/CustomTextInput';
-import { Loader } from '../../components/Loader';
-import { appStyles } from '../../styles/AppStyles';
-import { EXTRABOLD, MEDIUM, REGULAR, SEMIBOLD } from '../../constants/fontfamily';
-import { RFValue } from 'react-native-responsive-fontsize';
-import { useFocusEffect } from '@react-navigation/native';
-import { BASE_URL } from '../../constants/url';
-import { POSTNETWORK } from '../../utils/Network';
-import { storeObjByKey } from '../../utils/Storage';
+import {loginStyles} from './LoginStyles';
+import {HEIGHT, MyStatusBar, WIDTH} from '../../constants/config';
+import {CustomTextInput} from '../../components/CustomTextInput';
+import {Loader} from '../../components/Loader';
+import {appStyles} from '../../styles/AppStyles';
+import {EXTRABOLD, MEDIUM, REGULAR, SEMIBOLD} from '../../constants/fontfamily';
+import {RFValue} from 'react-native-responsive-fontsize';
+import {useFocusEffect} from '@react-navigation/native';
+import {BASE_URL} from '../../constants/url';
+import {POSTNETWORK} from '../../utils/Network';
+import {storeObjByKey} from '../../utils/Storage';
 import Alertmodal from '../../components/Alertmodal/Alertmodal';
 import Exitmodal from '../../components/Exitmodal';
-import { BG, LOGO, TATA } from '../../constants/imagepath';
-import { Card, Icon, Input } from 'react-native-elements';
+import {BG, LOGO, TATA} from '../../constants/imagepath';
+import {Card, Icon, Input} from 'react-native-elements';
 import LinearGradient from 'react-native-linear-gradient';
-import { Switch, TextInput } from 'react-native-paper';
-import { useDispatch } from 'react-redux';
-import { checkuserToken } from '../../redux/actions/auth';
-import { encode, decode } from 'base-64';
+import {Switch, TextInput} from 'react-native-paper';
+import {useDispatch} from 'react-redux';
+import {checkuserToken} from '../../redux/actions/auth';
+import {encode, decode} from 'base-64';
 
-const Login = ({ navigation, route }) => {
+const Login = ({navigation, route}) => {
   const [loader, setLoader] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [alertMsg, setAlertMsg] = useState('');
   const [alertModal, setAlertModal] = useState(false);
   const [exitModal, setExitModal] = useState(false);
-  const Dispatch = useDispatch()
+  const [pageLoad, setPageLoad] = useState(false);
+  const Dispatch = useDispatch();
 
   const [isSwitchOn, setIsSwitchOn] = React.useState(false);
 
@@ -60,39 +61,42 @@ const Login = ({ navigation, route }) => {
 
   const handleLogin = () => {
     console.log('Credentials:', email, password);
+    setPageLoad(true);
 
     // Encode password and email
     const pass = encode(password);
     const obj = encode(`${email}:${pass}`);
     console.log('object', obj);
 
-
     const myHeaders = new Headers();
-    myHeaders.append("Authorization", `Authenticate ${obj}`);
+    myHeaders.append('Authorization', `Authenticate ${obj}`);
 
     const requestOptions = {
-      method: "POST",
+      method: 'POST',
       headers: myHeaders,
-      redirect: "follow"
+      redirect: 'follow',
     };
 
     fetch(`${BASE_URL}user/auth/`, requestOptions)
-      .then((response) => response.json())
-      .then((result) => {
-        storeObjByKey('loginResponse', result)
-        Dispatch(checkuserToken())
-        console.log(result)
+      .then(response => response.json())
+      .then(result => {
+        storeObjByKey('loginResponse', result);
+        Dispatch(checkuserToken());
+        setPageLoad(false);
+        console.log(result);
       })
-      .catch((error) => console.error(error));
+      .catch(error => {
+        setPageLoad(false);
+        console.error(error);
+      });
   };
-
 
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       if (route?.params?.registered) {
         setAlertMsg('Registered successfully, Please login!');
         setAlertModal(true);
-        navigation.setParams({ registered: false });
+        navigation.setParams({registered: false});
       }
     });
     return unsubscribe;
@@ -111,22 +115,15 @@ const Login = ({ navigation, route }) => {
     return () => backHandler.remove();
   });
 
-  const login = () => {
-    let a = 1
-    storeObjByKey('loginResponse', a)
-    Dispatch(checkuserToken())
-  }
-
   return (
     <Fragment>
       <MyStatusBar backgroundColor={'black'} barStyle={'light-content'} />
       <SafeAreaView
-        style={[appStyles.safeareacontainer, { backgroundColor: WHITE }]}>
+        style={[appStyles.safeareacontainer, {backgroundColor: WHITE}]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={{ flex: 1 }}>
+          style={{flex: 1}}>
           <ImageBackground
-
             style={{
               flex: 1,
 
@@ -134,9 +131,7 @@ const Login = ({ navigation, route }) => {
               alignItems: 'center',
             }}
             source={BG}
-            resizeMode="repeat"
-
-          >
+            resizeMode="repeat">
             <ScrollView
               keyboardShouldPersistTaps={'handled'}
               showsVerticalScrollIndicator={false}
@@ -156,7 +151,7 @@ const Login = ({ navigation, route }) => {
                   alignItems: 'center',
                   borderRadius: 10,
                   shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
+                  shadowOffset: {width: 0, height: 2},
                   shadowOpacity: 0.2,
                   shadowRadius: 5,
                   elevation: 10,
@@ -165,8 +160,8 @@ const Login = ({ navigation, route }) => {
                 }}>
                 <LinearGradient
                   colors={['white', GREEN]}
-                  start={{ x: 3.5, y: 0 }}
-                  end={{ x: 0, y: 0.5 }}
+                  start={{x: 3.5, y: 0}}
+                  end={{x: 0, y: 0.5}}
                   style={{
                     width: WIDTH * 0.86,
                     height: HEIGHT * 0.16,
@@ -175,7 +170,7 @@ const Login = ({ navigation, route }) => {
                     top: -HEIGHT * 0.05,
                     borderRadius: 10,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: 4 },
+                    shadowOffset: {width: 0, height: 4},
                     shadowOpacity: 0.3,
                     shadowRadius: 8,
                     elevation: 12,
@@ -288,7 +283,9 @@ const Login = ({ navigation, route }) => {
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  onPress={() => { handleLogin() }}
+                  onPress={() => {
+                    handleLogin();
+                  }}
                   style={{
                     width: WIDTH * 0.9,
                     height: HEIGHT * 0.065,
@@ -358,6 +355,7 @@ const Login = ({ navigation, route }) => {
           onConfirm={() => BackHandler.exitApp()}
         />
       )}
+      <Loader visible={pageLoad} />
     </Fragment>
   );
 };
