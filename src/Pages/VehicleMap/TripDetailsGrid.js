@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {View, StyleSheet, FlatList, Text} from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import {HEIGHT, WIDTH} from '../../constants/config';
-import {BOLD} from '../../constants/fontfamily';
+import {BOLD, SEMIBOLD} from '../../constants/fontfamily';
 import {RFValue} from 'react-native-responsive-fontsize';
 import LinearGradient from 'react-native-linear-gradient';
 
@@ -45,37 +45,37 @@ const TripDetailsGrid = ({data}) => {
       {
         id: '1',
         status: 'All',
-        backgroundColor: ['#007BFF', '#1a73e8'],
+        backgroundColor: ['#87CEEB', '#1E90FF'], // Deep blue to sky blue gradient
         data: totalActiveStatus,
       },
       {
         id: '2',
         status: 'Running',
-        backgroundColor: ['#28A745', '#1dbe46'],
+        backgroundColor: ['#2A9D8F', '#33D9B2'], // Aqua green to light teal
         data: runningCount,
       },
       {
         id: '3',
         status: 'Idle',
-        backgroundColor: ['#FFC107', '#ffbb33'],
+        backgroundColor: ['#FFC300', '#FFD60A'], // Vibrant yellow gradient
         data: idleCount,
       },
       {
         id: '4',
         status: 'Stopped',
-        backgroundColor: ['#DC3545', '#e02e2e'],
+        backgroundColor: ['#E63946', '#FF6B6B'], // Crimson red to pastel red
         data: stoppedCount,
       },
       {
         id: '5',
         status: 'Overspeed',
-        backgroundColor: ['#FD7E14', '#ff6a00'],
+        backgroundColor: ['#F4A261', '#E76F51'], // Peach to salmon gradient
         data: overspeedCount,
       },
       {
         id: '6',
         status: 'Unreachable',
-        backgroundColor: ['#6C757D', '#5a6268'],
+        backgroundColor: ['#8D99AE', '#EDF2F4'], // Light grayish blue gradient
         data: unreachableCount,
       },
     ];
@@ -83,69 +83,59 @@ const TripDetailsGrid = ({data}) => {
     setStatusData(updatedStatusData);
   }, [data]);
 
-  const renderItem = ({item}) => {
-    if (item.status === 'All') {
-      // Render the "All" status as a rectangle
-      return (
-        <View style={styles.rectangleContainer}>
-          <LinearGradient
-            colors={item.backgroundColor}
-            style={styles.statusRectangle}
-            start={{x: 0, y: 0}}
-            end={{x: 1, y: 1}}>
-            <View style={styles.row}>
-              <Icon name="directions-car" size={35} color="white" />
-              <Text style={styles.statusText}>{item.status}</Text>
-            </View>
-            <Text style={styles.statusText1}>{item.data}</Text>
-          </LinearGradient>
-        </View>
-      );
-    }
-    // Render other statuses as squares
+  const renderRectangle = () => {
+    const rectangleData = statusData.find(item => item.status === 'All');
+    if (!rectangleData) return null;
+
     return (
-      <View style={styles.cardContainer}>
+      <View style={styles.rectangleContainer}>
         <LinearGradient
-          colors={item.backgroundColor}
-          style={styles.statusSquare}
+          colors={rectangleData.backgroundColor}
+          style={styles.statusRectangle}
           start={{x: 0, y: 0}}
           end={{x: 1, y: 1}}>
-          <Icon name="directions-car" size={35} color="white" />
-          <Text style={styles.statusText1}>{item.data}</Text>
+          <View style={styles.row}>
+            <Text style={styles.statusTextRect}>{rectangleData.status}</Text>
+            <Icon name="directions-car" size={35} color="white" />
+          </View>
+          <Text style={styles.statusText1Rect}>{rectangleData.data}</Text>
         </LinearGradient>
-        <View style={styles.textContainer}>
-          <Text style={styles.statusText}>{item.status}</Text>
-        </View>
       </View>
     );
   };
 
-  return (
-    <View style={styles.container}>
-      <FlatList
-        nestedScrollEnabled={true}
-        data={statusData}
-        renderItem={renderItem}
-        keyExtractor={item => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.listContainer}
-        columnWrapperStyle={styles.rowStyle}
-        showsVerticalScrollIndicator={false}
-      />
+  const renderCircleItem = ({item}) => (
+    <View style={styles.cardContainer}>
+      <LinearGradient
+        colors={item.backgroundColor}
+        style={styles.statusSquare}
+        start={{x: 0, y: 0}}
+        end={{x: 1, y: 1}}>
+        <Icon name="directions-car" size={25} color="white" />
+        <Text style={styles.statusText1}>{item.data}</Text>
+      </LinearGradient>
+      <View style={styles.textContainer}>
+        <Text style={styles.statusText}>{item.status}</Text>
+      </View>
     </View>
   );
 
+  const circleData = statusData.filter(item => item.status !== 'All');
+
   return (
     <View style={styles.container}>
+      {/* Render Rectangle */}
+      {renderRectangle()}
+
+      {/* Render Circles */}
       <FlatList
-        nestedScrollEnabled={true}
-        data={statusData}
-        renderItem={renderItem}
+        data={circleData}
+        renderItem={renderCircleItem}
         keyExtractor={item => item.id}
-        numColumns={2}
-        contentContainerStyle={styles.listContainer}
-        columnWrapperStyle={styles.rowStyle}
+        numColumns={3}
+        contentContainerStyle={styles.circleListContainer}
         showsVerticalScrollIndicator={false}
+        columnWrapperStyle={{justifyContent: 'space-between'}}
       />
     </View>
   );
@@ -154,74 +144,95 @@ const TripDetailsGrid = ({data}) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingVertical: 16,
-    paddingHorizontal: 10,
-    backgroundColor: '#f9f9f9',
+    paddingVertical: 10,
+    paddingHorizontal: 5,
+    backgroundColor: '#f0f0f0', // Light gray background color
+    borderRadius: 15,
+    marginBottom: 5,
+    shadowColor: '#000', // Subtle shadow for the container
+    shadowOffset: {width: 0, height: 3},
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 6,
+    overflow: 'hidden',
   },
-
-  listContainer: {
-    justifyContent: 'center',
-  },
-  rowStyle: {
-    justifyContent: 'space-between',
-    // marginBottom: 16,
+  rectangleContainer: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+    backgroundColor: 'transparent',
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-evenly', // Adds space between items
+    paddingHorizontal: 100, // Optional: Add some padding for better spacing
+    alignSelf: 'stretch',
+    // marginBottom: 8,
+  },
+
+  statusRectangle: {
+    width: '95%',
+    paddingHorizontal: 5,
+    borderRadius: 15,
     justifyContent: 'center',
     alignSelf: 'center',
-    marginBottom: 8,
-  },
-  rectangleContainer: {
-    width: '100%',
-    // alignItems: 'center',
-    marginBottom: 16,
-  },
-  statusRectangle: {
-    width: '95%', // Full width with padding
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 10,
-    justifyContent: 'center',
-    // alignItems: 'center',
     elevation: 6,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 3},
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+  },
+  circleListContainer: {
+    paddingHorizontal: 8,
+    paddingTop: 10,
+    backgroundColor: '#F4F7FB', // Light blue-gray gradient background
+    borderRadius: 15,
+    paddingBottom: 10,
   },
   cardContainer: {
     alignItems: 'center',
     marginBottom: 10,
-    width: WIDTH * 0.42,
+    width: WIDTH * 0.29,
   },
   statusSquare: {
-    width: WIDTH * 0.35,
-    height: WIDTH * 0.35,
-    borderRadius: 10, // Slightly rounded square
+    width: WIDTH * 0.19,
+    height: WIDTH * 0.19,
+    borderRadius: WIDTH * 0.09,
     justifyContent: 'center',
     alignItems: 'center',
-    elevation: 6,
+    elevation: 4,
     shadowColor: '#000',
-    shadowOffset: {width: 0, height: 3},
+    shadowOffset: {width: 0, height: 2},
     shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowRadius: 3,
   },
   textContainer: {
-    // marginTop: 8,
     alignItems: 'center',
+    marginTop: 5,
   },
   statusText: {
     fontSize: RFValue(14),
     fontFamily: BOLD,
-    color: 'black',
-    marginLeft: 8,
+    color: '#2C3E50', // Dark slate blue for better contrast
+  },
+  statusTextRect: {
+    fontSize: RFValue(30),
+    fontFamily: SEMIBOLD,
+    color: 'white',
+    textAlign: 'center',
+  },
+  statusText1Rect: {
+    fontSize: RFValue(30),
+    fontFamily: BOLD,
+    color: 'white',
+    textAlign: 'center',
+    marginTop: 5,
   },
   statusText1: {
-    fontSize: RFValue(18),
+    fontSize: RFValue(14),
     fontFamily: BOLD,
-    color: 'black',
+    color: 'white',
     textAlign: 'center',
     marginTop: 5,
   },

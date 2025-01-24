@@ -36,6 +36,8 @@ import {Switch, TextInput} from 'react-native-paper';
 import {useDispatch} from 'react-redux';
 import {checkuserToken} from '../../redux/actions/auth';
 import {encode, decode} from 'base-64';
+import VideoPlayer from './VideoPlayer';
+import FastImage from 'react-native-fast-image';
 
 const Login = ({navigation, route}) => {
   const [loader, setLoader] = useState(false);
@@ -117,98 +119,54 @@ const Login = ({navigation, route}) => {
 
   return (
     <Fragment>
-      <MyStatusBar backgroundColor={'black'} barStyle={'light-content'} />
-      <SafeAreaView
-        style={[appStyles.safeareacontainer, {backgroundColor: WHITE}]}>
+      <MyStatusBar
+        backgroundColor={'rgba(255, 255, 255, 0.8)'}
+        barStyle={'dark-content'}
+      />
+      <SafeAreaView style={[appStyles.safeareacontainer]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           style={{flex: 1}}>
           <ImageBackground
             style={{
               flex: 1,
-
               justifyContent: 'center',
               alignItems: 'center',
             }}
-            source={BG}
-            resizeMode="repeat">
+            source={require('../../assets/images/map1.jpeg')}
+            resizeMode="cover">
             <ScrollView
               keyboardShouldPersistTaps={'handled'}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 flexGrow: 1,
                 alignItems: 'center',
-                paddingBottom: 50,
+                // paddingBottom: 10,
                 alignSelf: 'center',
                 justifyContent: 'center',
               }}>
               <View
                 style={{
-                  width: WIDTH * 0.97,
-                  height: HEIGHT * 0.58,
+                  width: WIDTH * 0.9,
                   alignSelf: 'center',
-                  backgroundColor: WHITE,
+                  backgroundColor: 'rgba(255, 255, 255, 0.8)', // Slightly opaque background
                   alignItems: 'center',
-                  borderRadius: 10,
+                  borderRadius: 15,
+                  paddingTop: HEIGHT * 0.1,
+                  paddingBottom: HEIGHT * 0.1,
                   shadowColor: '#000',
-                  shadowOffset: {width: 0, height: 2},
-                  shadowOpacity: 0.2,
-                  shadowRadius: 5,
-                  elevation: 10,
-                  paddingTop: HEIGHT * 0.1, // Adds space to prevent overlap
-                  marginTop: HEIGHT * 0.22, // Increased margin to avoid overlap
+                  shadowOffset: {width: 0, height: 5},
+                  shadowOpacity: 0.3,
+                  shadowRadius: 10,
                 }}>
-                <LinearGradient
-                  colors={['white', GREEN]}
-                  start={{x: 3.5, y: 0}}
-                  end={{x: 0, y: 0.5}}
-                  style={{
-                    width: WIDTH * 0.86,
-                    height: HEIGHT * 0.16,
-                    marginBottom: HEIGHT * 0.1, // Increased margin to avoid overlap
-                    position: 'absolute',
-                    top: -HEIGHT * 0.05,
-                    borderRadius: 10,
-                    shadowColor: '#000',
-                    shadowOffset: {width: 0, height: 4},
-                    shadowOpacity: 0.3,
-                    shadowRadius: 8,
-                    elevation: 12,
-                  }}>
-                  <View
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      borderRadius: 10,
-                      overflow: 'hidden',
-                      alignItems: 'center',
-                    }}>
-                    <Image
-                      source={{}}
-                      style={{
-                        width: WIDTH * 0.2,
-                        height: HEIGHT * 0.1,
-                        tintColor: WHITE,
-                      }}
-                      resizeMode="center"
-                    />
-                    <Image
-                      source={{}}
-                      style={{
-                        width: WIDTH * 0.5,
-                        height: HEIGHT * 0.05,
-                        tintColor: WHITE,
-                      }}
-                      resizeMode="center"
-                    />
-                  </View>
-                </LinearGradient>
+                {/* Logo and Title */}
 
+                {/* Email Input */}
                 <TextInput
                   label="Email"
                   style={{
-                    width: WIDTH * 0.9,
-                    marginTop: HEIGHT * 0.05,
+                    width: WIDTH * 0.8,
+                    marginTop: HEIGHT * 0.03,
                     backgroundColor: 'white',
                   }}
                   mode="outlined"
@@ -219,10 +177,12 @@ const Login = ({navigation, route}) => {
                   value={email}
                   onChangeText={text => setEmail(text)}
                 />
+
+                {/* Password Input */}
                 <TextInput
                   label="Password"
                   style={{
-                    width: WIDTH * 0.9,
+                    width: WIDTH * 0.8,
                     marginTop: HEIGHT * 0.02,
                     backgroundColor: 'white',
                   }}
@@ -235,22 +195,20 @@ const Login = ({navigation, route}) => {
                   onChangeText={text => setPassword(text)}
                 />
 
+                {/* Remember Me Switch */}
                 <View
                   style={{
-                    width: WIDTH * 0.95,
+                    width: WIDTH * 0.8,
                     height: HEIGHT * 0.07,
                     alignItems: 'center',
                     flexDirection: 'row',
-                    marginRight: HEIGHT * 0.075,
                     marginTop: HEIGHT * 0.02,
                   }}>
                   <Switch
                     value={isSwitchOn}
                     onValueChange={onToggleSwitch}
                     style={{
-                      width: WIDTH * 0.22,
-                      height: HEIGHT * 0.1,
-
+                      marginRight: 10,
                       tintColor: isSwitchOn ? WHITE : ORANGE,
                     }}
                     color="orange"
@@ -264,13 +222,13 @@ const Login = ({navigation, route}) => {
                     Remember Me
                   </Text>
                 </View>
+
+                {/* Forgot Password */}
                 <TouchableOpacity
-                  // onPress={() => navigation.navigate('ForgotPassword')}
+                  onPress={() => navigation.navigate('ForgotPassword')}
                   style={{
-                    width: WIDTH * 0.9,
-                    height: HEIGHT * 0.05,
+                    width: WIDTH * 0.8,
                     alignItems: 'flex-end',
-                    justifyContent: 'center',
                     marginTop: HEIGHT * 0.02,
                   }}>
                   <Text
@@ -282,12 +240,12 @@ const Login = ({navigation, route}) => {
                     Forgot Password?
                   </Text>
                 </TouchableOpacity>
+
+                {/* Login Button */}
                 <TouchableOpacity
-                  onPress={() => {
-                    handleLogin();
-                  }}
+                  onPress={handleLogin}
                   style={{
-                    width: WIDTH * 0.9,
+                    width: WIDTH * 0.8,
                     height: HEIGHT * 0.065,
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -306,31 +264,50 @@ const Login = ({navigation, route}) => {
                 </TouchableOpacity>
               </View>
 
+              {/* Footer */}
               <View
                 style={{
                   width: WIDTH * 0.9,
                   height: HEIGHT * 0.04,
                   alignItems: 'center',
                   justifyContent: 'center',
-                  marginTop: HEIGHT * 0.06,
-                  marginBottom: HEIGHT * 0.005,
+                  marginTop: HEIGHT * 0.05,
                 }}>
                 <Text
                   style={{
-                    color: WHITE,
+                    color: BLACK,
                     fontSize: RFValue(12),
                     fontFamily: MEDIUM,
                   }}>
-                  © 2024,made by{' '}
+                  © 2024, made by{' '}
                   <Text
                     style={{
-                      color: WHITE,
+                      color: BLACK,
                       fontSize: RFValue(14),
                       fontFamily: EXTRABOLD,
                     }}>
                     Epsumlabs
                   </Text>
                 </Text>
+              </View>
+              <View
+                style={{
+                  width: WIDTH,
+                  height: HEIGHT * 0.21,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginTop: HEIGHT * 0.08,
+                  backgroundColor: 'transparent',
+                }}>
+                {/* <VideoPlayer /> */}
+                <FastImage
+                  source={require('../../assets/images/truckVideo.gif')}
+                  style={{
+                    height: '100%',
+                    width: '100%',
+                    resizeMode: 'cover',
+                  }}
+                />
               </View>
             </ScrollView>
           </ImageBackground>

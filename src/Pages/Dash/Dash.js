@@ -18,7 +18,7 @@ import {
 import React, {useState, useEffect, useRef} from 'react';
 import {Avatar, Icon} from '@rneui/themed';
 import {BOLD, LIGHT, REGULAR, SEMIBOLD} from '../../constants/fontfamily';
-import {HEIGHT, WIDTH} from '../../constants/config';
+import {HEIGHT, STYLES, WIDTH} from '../../constants/config';
 import {clearAll} from '../../utils/Storage';
 import {checkuserToken} from '../../redux/actions/auth';
 import {useDispatch} from 'react-redux';
@@ -34,6 +34,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import HistoryModal from '../History/HistoryModal';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {Loader} from '../../components/Loader';
+import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
 
 const Dash = ({}) => {
   const [vehicleData, setVehicleData] = useState([]);
@@ -267,8 +268,9 @@ const Dash = ({}) => {
 
   const connectWebSocket = thingid => {
     const WEBSOCKET_URL = `${ws_baseurl}/thing/r/${thingid}/`;
-    setPageLoad(true);
+    setPageLoad(false);
     console.log('Connecting to WebSocket:', WEBSOCKET_URL); // Log WebSocket URL
+    setPageLoad(false);
 
     websocket.current = new WebSocket(WEBSOCKET_URL);
 
@@ -530,14 +532,22 @@ const Dash = ({}) => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#316163" />
-      <LinearGradient
+      <StatusBar barStyle="light-content" backgroundColor="#1D3557" />
+      {/* <LinearGradient
         colors={['#316163', '#4db6b3']} // Light pink to dark red gradient
         style={{flex: 1}}
         start={{x: 0, y: 0}} // Start from top-left corner
         end={{x: 1, y: 1}} // End at bottom-right corner
         locations={[0, 1]} // Gradient stops
+      > */}
+      <LinearGradient
+        colors={['#1D3557', '#457B9D']} // Light pink to dark red gradient
+        style={{flex: 1}}
+        start={{x: 0, y: 0}} // Start from top-left corner
+        end={{x: 1, y: 0}} // End at top-right corner
+        locations={[0, 1]} // Gradient stops
       >
+        {/* <MapView provider={PROVIDER_GOOGLE} style={STYLES.map}> */}
         <KeyboardAvoidingView
           style={{flex: 1}}
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -715,7 +725,7 @@ const Dash = ({}) => {
                   <TouchableOpacity
                     onPress={() => {
                       setShowMap(true);
-                      //   console.log('Track pressed');
+                      // console.log('Track pressed', Location);
                     }}>
                     <Text style={styles.headerButton}>Track</Text>
                   </TouchableOpacity>
@@ -854,6 +864,7 @@ const Dash = ({}) => {
           log={Log}
         />
       </LinearGradient>
+      {/* </MapView> */}
       <Loader visible={pageLoad} />
     </>
   );

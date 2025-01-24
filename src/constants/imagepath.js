@@ -10,3 +10,4 @@ export const IBTN = require('../assets/images/ibtn.png');
 export const DELETE = require('../assets/images/delete.png');
 export const TATA = require('../assets/images/tata.png');
 export const BG = require('../assets/images/bg.jpg');
+export const PIN = require('../assets/images/pin.png');
