@@ -47,7 +47,9 @@ const Track = ({showTrack, latitude, longitude, visible, onClose}) => {
           provider={PROVIDER_GOOGLE}
           style={styles.map}
           region={region}
-          showsUserLocation={true}>
+          mapType="hybrid"
+          // showsUserLocation={true}
+        >
           {showTrack?.length > 0 && (
             <>
               <Marker

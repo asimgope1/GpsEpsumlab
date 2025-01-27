@@ -143,6 +143,7 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
         </TouchableOpacity>
         <MapView
           style={styles.map}
+          mapType="hybrid"
           initialRegion={{
             latitude: 20.3480968, // Default center lat
             longitude: 85.8439865, // Default center long

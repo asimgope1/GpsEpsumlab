@@ -5,7 +5,6 @@ import {
   ScrollView,
   SafeAreaView,
   Text,
-  FlatList,
   StatusBar,
   TouchableOpacity,
   Image,
@@ -14,8 +13,9 @@ import {
   ActivityIndicator,
   RefreshControl,
   Alert,
+  ImageBackground,
 } from 'react-native';
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import {Avatar, Icon} from '@rneui/themed';
 import {BOLD, LIGHT, REGULAR, SEMIBOLD} from '../../constants/fontfamily';
 import {HEIGHT, STYLES, WIDTH} from '../../constants/config';
@@ -32,9 +32,14 @@ import {useNavigation} from '@react-navigation/native';
 import Track from '../Track/Track';
 import LinearGradient from 'react-native-linear-gradient';
 import HistoryModal from '../History/HistoryModal';
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import {FlatList, GestureHandlerRootView} from 'react-native-gesture-handler';
 import {Loader} from '../../components/Loader';
-import MapView, {PROVIDER_GOOGLE} from 'react-native-maps';
+import MapView, {Marker, PROVIDER_GOOGLE} from 'react-native-maps';
+import Geolocation from '@react-native-community/geolocation';
+import BottomSheet, {
+  BottomSheetFlatList,
+  BottomSheetView,
+} from '@gorhom/bottom-sheet';
 
 const Dash = ({}) => {
   const [vehicleData, setVehicleData] = useState([]);
@@ -63,9 +68,24 @@ const Dash = ({}) => {
   const [statusMap, setStatusMap] = useState({});
   const [data, setData] = useState([]);
   const [pageLoad, setPageLoad] = useState(false);
+  const [position, setPosition] = useState(null);
+  const bottomSheetRef = useRef(null);
+
+  // callbacks
+  const handleSheetChanges = useCallback(index => {
+    console.log('handleSheetChanges', index);
+  }, []);
+
+  const region = {
+    latitude: position?.latitude || 28.6139, // Default to New Delhi
+    longitude: position?.longitude || 77.209,
+    latitudeDelta: 0.05, // Zoom level
+    longitudeDelta: 0.05,
+  };
 
   // Fetch data at intervals
   useEffect(() => {
+    GetLocation();
     const interval = setInterval(() => {
       GetDerivedData();
     }, 1000000); // Fetch every 10 seconds
@@ -79,14 +99,23 @@ const Dash = ({}) => {
   const onRefresh = () => {
     setRefreshing(true);
     GetDerivedData();
-    // setRefreshing(false);
-    // setRefreshing(!refreshing); // Toggle refresh state
-    // if (refreshing) {
-    //   GetDerivedData();
-    // }
   };
   const handleClose = () => {
     setShowMap(false); // Hide the map when close button is pressed
+  };
+
+  const GetLocation = async () => {
+    Geolocation.getCurrentPosition(
+      position => {
+        setPosition(position.coords); // Set the user's location
+        console.log('Location:', position.coords);
+      },
+      error => {
+        console.error('Geolocation error:', error.message);
+        Alert.alert('Error', 'Failed to get location. Please try again.');
+      },
+      {maximumAge: 10000},
+    );
   };
 
   const GetSelectedVehicle = item => {
@@ -116,26 +145,6 @@ const Dash = ({}) => {
     GetDerivedData();
     GetUser();
   }, []); // Only run once when the component mounts
-
-  // useEffect(() => {
-  //   // GetDerivedData();
-  //   // GetUser();
-  //   const interval1 = setInterval(() => {
-  //     // GetDerivedData();
-  //     console.log('Checking vehicle status every first seconds...');
-  //   }, 10000);
-  //   const interval2 = setInterval(() => {
-  //     console.log('Checking vehicle status every 15 seconds...');
-  //   }, 15000);
-  //   const interval3 = setInterval(() => {
-  //     console.log('Performing another operation every 30 seconds...');
-  //   }, 30000);
-  //   return () => {
-  //     clearInterval(interval1);
-  //     clearInterval(interval2);
-  //     clearInterval(interval3);
-  //   };
-  // }, []);
 
   const GetDerivedData = async () => {
     const Url = `${BASE_URL}projects/117/things/?page=1&search=&type=gps`;
@@ -391,7 +400,7 @@ const Dash = ({}) => {
                   ? '#DC3545'
                   : statusMap[item.thing_id] === 'Unreachable'
                   ? '#6C757D'
-                  : '#007BFF'
+                  : '#4db6b3'
               }
               size={30}
               style={styles.icon}
@@ -431,7 +440,7 @@ const Dash = ({}) => {
             <Icon
               name="check-circle"
               type="MaterialIcons"
-              color="#316163"
+              color="#1E90FF"
               size={23}
               style={styles.icon}
             />
@@ -446,7 +455,7 @@ const Dash = ({}) => {
             <Icon
               name="account-circle"
               type="MaterialIcons"
-              color="#316163"
+              color="#1E90FF"
               size={23}
               style={styles.icon}
             />
@@ -463,7 +472,7 @@ const Dash = ({}) => {
             <Icon
               name="trending-up"
               type="MaterialIcons"
-              color="#316163"
+              color="#1E90FF"
               size={23}
               style={styles.icon}
             />
@@ -478,7 +487,7 @@ const Dash = ({}) => {
             <Icon
               name="speed"
               type="MaterialIcons"
-              color="#316163"
+              color="#1E90FF"
               size={23}
               style={styles.icon}
             />
@@ -496,7 +505,7 @@ const Dash = ({}) => {
         <Icon
           name="straighten"
           type="MaterialIcons"
-          color="#316163"
+          color="#1E90FF"
           size={23}
           style={styles.icon}
         />
@@ -513,7 +522,7 @@ const Dash = ({}) => {
             <Icon
               name="place"
               type="MaterialIcons"
-              color="#316163"
+              color="#1E90FF"
               size={23}
               style={styles.icon}
             />
@@ -532,121 +541,190 @@ const Dash = ({}) => {
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor="#1D3557" />
+      <StatusBar barStyle="light-content" backgroundColor="#1E90FF" />
+
       {/* <LinearGradient
-        colors={['#316163', '#4db6b3']} // Light pink to dark red gradient
-        style={{flex: 1}}
-        start={{x: 0, y: 0}} // Start from top-left corner
-        end={{x: 1, y: 1}} // End at bottom-right corner
-        locations={[0, 1]} // Gradient stops
-      > */}
-      <LinearGradient
         colors={['#1D3557', '#457B9D']} // Light pink to dark red gradient
         style={{flex: 1}}
         start={{x: 0, y: 0}} // Start from top-left corner
         end={{x: 1, y: 0}} // End at top-right corner
         locations={[0, 1]} // Gradient stops
-      >
-        {/* <MapView provider={PROVIDER_GOOGLE} style={STYLES.map}> */}
-        <KeyboardAvoidingView
-          style={{flex: 1}}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-          {/* Header Container */}
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              width: '99%',
-              // elevation: 25,
+      > */}
+      {/* <MapView provider={PROVIDER_GOOGLE} style={STYLES.map}> */}
+      <KeyboardAvoidingView
+        style={{flex: 1}}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        {/* Header Container */}
 
-              // elevation: 5,
-              paddingVertical: 25,
-              paddingHorizontal: 10,
-              // backgroundColor: '#4db6b3',
-              alignSelf: 'center',
-              // shadowColor: '#000',
-              // shadowOffset: {width: 0, height: 2},
-              // shadowOpacity: 0.25,
-              // shadowRadius: 3.5,
-              // borderRadius: 8,
-            }}>
-            <View style={{flexDirection: 'row', alignItems: 'center'}}>
-              {User && (
-                <Avatar
-                  size="medium"
-                  rounded
-                  source={{
-                    uri: 'https://randomuser.me/api/portraits/men/1.jpg',
-                  }}
-                />
-              )}
-              <Text
-                style={{
-                  color: 'white',
-                  // fontWeight: 'bold',
-                  fontFamily: BOLD,
-                  fontSize: 15,
-                  marginLeft: 10,
-                }}>
-                Welcome, {User?.name}
-                {'\n'}
-                Last login:{' '}
-                {moment(User?.last_active).format('DD/MM/YYYY h:mm a')}
-              </Text>
-            </View>
-            <Icon
-              onPress={() => {
-                clearAll();
-                Dispatch(checkuserToken());
+        <GestureHandlerRootView>
+          <ScrollView
+            contentContainerStyle={{flexGrow: 1}}
+            scrollEnabled={true}>
+            <MapView
+              provider={PROVIDER_GOOGLE}
+              style={{
+                width: WIDTH,
+                flex: 1,
+                // height: HEIGHT * 0.45,
+                marginBottom: 10,
               }}
-              name="logout"
-              type="AntDesign"
-              color="white"
-              size={25}
-            />
-          </View>
-          <GestureHandlerRootView>
-            <ScrollView
-              contentContainerStyle={{flexGrow: 1}}
-              scrollEnabled={true}>
-              <View style={{flex: 1, alignItems: 'center', width: '100%'}}>
+              mapType="hybrid"
+              showsUserLocation={true}
+              showsCompass={true}
+              loadingEnabled={true}
+              userLocationFastestInterval={1000}
+              region={region}>
+              <Marker coordinate={region} title="You are Here" description="" />
+            </MapView>
+            <View
+              style={{
+                height: 50,
+                width: WIDTH * 0.85,
+                // backgroundColor: 'rgba(100,100,100,0.5)',
+                margin: 10,
+                position: 'absolute',
+                flexDirection: 'row',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                borderRadius: 5,
+              }}>
+              <View
+                style={{
+                  width: 50,
+                  height: 50,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderRadius: 25,
+                  backgroundColor: '#1E90FF',
+                }}>
+                <Icon
+                  onPress={() => {
+                    clearAll();
+                    Dispatch(checkuserToken());
+                  }}
+                  name="logout"
+                  type="SimpleLineIcons"
+                  color="white"
+                  size={25}
+                />
+              </View>
+            </View>
+
+            <BottomSheet
+              ref={bottomSheetRef}
+              enableDynamicSizing={true}
+              onChange={handleSheetChanges}
+              snapPoints={[120, 400, '90%']}>
+              <BottomSheetView style={styles.contentContainer}>
                 <View
                   style={{
-                    height: HEIGHT * 0.5,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '99%',
+                    paddingVertical: 25,
+                    paddingHorizontal: 10,
+                    // backgroundColor: '#4db6b3',
+                    alignSelf: 'center',
+                  }}>
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    {User && (
+                      <View
+                        style={{
+                          // elevation: 8,
+                          backgroundColor: 'white',
+                          borderRadius: 5,
+                          padding: 5,
+                          marginLeft: 5,
+                          justifyContent: 'center',
+                        }}>
+                        <Avatar
+                          size="medium"
+                          rounded
+                          source={{
+                            uri: 'https://randomuser.me/api/portraits/men/1.jpg',
+                          }}
+                        />
+                      </View>
+                    )}
+                    <Text
+                      style={{
+                        color: 'grey',
+                        // fontWeight: 'bold',
+                        fontFamily: SEMIBOLD,
+                        fontSize: 15,
+                        marginLeft: 10,
+                      }}>
+                      Welcome, {User?.name}
+                      {'\n'}
+                      Last login:{' '}
+                      {moment(User?.last_active).format('DD/MM/YYYY h:mm a')}
+                    </Text>
+                  </View>
+                </View>
+                <View
+                  style={{
+                    width: WIDTH,
+                    height: HEIGHT * 0.28,
+                    // position: 'absolute',
                   }}>
                   <TripDetailsGrid data={statusMap} />
                 </View>
 
                 <View
                   style={{
-                    backgroundColor: '#C5CED3',
-                    paddingVertical: 15,
-                    paddingHorizontal: 10,
-                    borderTopRightRadius: 25,
+                    flexDirection: 'row',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    width: '95%',
+                    height: HEIGHT * 0.055,
+                    marginTop: 5,
+                    // paddingHorizontal: 10,
+                    // backgroundColor: '#4db6b3',
+                    alignSelf: 'center',
+                  }}>
+                  {/* recent trips */}
+                  <Text
+                    style={{
+                      fontFamily: BOLD,
+                      fontSize: RFValue(15),
+                      color: 'black',
+                      marginBottom: 10,
+                      marginLeft: 10,
+                    }}>
+                    Recent Trips
+                  </Text>
+                  <Icon
+                    onPress={() => {
+                      onRefresh();
+                    }}
+                    name="refresh"
+                    size={30}
+                    type="MaterialIcons"
+                  />
+                </View>
+
+                <View
+                  style={{
+                    width: WIDTH,
+                    height: HEIGHT * 0.5,
+                    orderTopRightRadius: 25,
                     borderTopLeftRadius: 25,
                     alignItems: 'center',
                     justifyContent: 'center',
-                    width: '100%',
+                    width: WIDTH,
+                    alignSelf: 'centerß',
                     shadowColor: '#000',
                     shadowOffset: {width: 0, height: 2},
                     shadowOpacity: 0.25,
                     shadowRadius: 3.5,
-                    // elevation: 5,
-                    flex: 1,
                   }}>
-                  {/* Display content */}
                   {loading ? (
                     renderLoading()
                   ) : error ? (
                     renderError()
                   ) : (
-                    <View
-                      style={{
-                        height: HEIGHT * 0.55,
-                        width: WIDTH * 0.95,
-                        alignSelf: 'center',
-                      }}>
+                    <View>
                       <FlatList
                         nestedScrollEnabled={true}
                         data={vehicleData}
@@ -654,7 +732,6 @@ const Dash = ({}) => {
                         keyExtractor={(item, index) => index.toString()}
                         contentContainerStyle={{
                           width: '100%',
-                          paddingHorizontal: 10,
                         }}
                         refreshControl={
                           <RefreshControl
@@ -663,207 +740,218 @@ const Dash = ({}) => {
                             colors={['black']}
                           />
                         }
+                        ListFooterComponent={
+                          <View
+                            style={{
+                              width: '100%',
+                              height: HEIGHT * 0.2,
+                              backgroundColor: 'rgba(255, 255, 255, 0.7)',
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          />
+                        }
                       />
                     </View>
                   )}
                 </View>
+              </BottomSheetView>
+            </BottomSheet>
+          </ScrollView>
+        </GestureHandlerRootView>
+      </KeyboardAvoidingView>
+
+      {showMap &&
+      Array.isArray(Location) &&
+      Location.length > 0 &&
+      Location[0] !== undefined &&
+      Location[1] !== undefined ? (
+        <View style={{flex: 1}}>
+          <Track
+            showTrack={showTrack}
+            latitude={Location[0]} // Pass the latitude value
+            longitude={Location[1]} // Pass the longitude value
+            onClose={handleClose} // Handle close functionality
+          />
+        </View>
+      ) : (
+        showMap &&
+        Alert.alert(
+          'Invalid Location',
+          'Location data is not available. Cannot track.',
+          [{text: 'OK'}],
+        )
+      )}
+      <Modal
+        animationType="slide"
+        transparent={true}
+        visible={showModal}
+        onRequestClose={() => {
+          setShowModal(false);
+        }}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {/* Header */}
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Vehicle Details</Text>
+              <View style={styles.headerActions}>
+                <TouchableOpacity
+                  onPress={() => {
+                    // setHistory(true);
+                    setViewHistory(true);
+                    // navigation.navigate('History');
+                    //   console.log('History pressed');
+                  }}>
+                  <Text
+                    style={{
+                      ...styles.headerButton,
+                      color: '#1E90FF',
+                      fontSize: RFValue(12),
+                    }}>
+                    History
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowMap(true);
+                    // console.log('Track pressed', Location);
+                  }}>
+                  <Text style={styles.headerButton}>Track</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => {
+                    setViewHistory(false);
+                    setShowModal(false);
+                  }}>
+                  <Text style={styles.headerButton}>Close</Text>
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-          </GestureHandlerRootView>
-        </KeyboardAvoidingView>
+            </View>
 
-        {showMap &&
-        Array.isArray(Location) &&
-        Location.length > 0 &&
-        Location[0] !== undefined &&
-        Location[1] !== undefined ? (
-          <View style={{flex: 1}}>
-            <Track
-              showTrack={showTrack}
-              latitude={Location[0]} // Pass the latitude value
-              longitude={Location[1]} // Pass the longitude value
-              onClose={handleClose} // Handle close functionality
-            />
-          </View>
-        ) : (
-          showMap &&
-          Alert.alert(
-            'Invalid Location',
-            'Location data is not available. Cannot track.',
-            [{text: 'OK'}],
-          )
-        )}
-        <Modal
-          animationType="slide"
-          transparent={true}
-          visible={showModal}
-          onRequestClose={() => {
-            setShowModal(false);
-          }}>
-          <View style={styles.modalOverlay}>
-            <View style={styles.modalCard}>
-              {/* Header */}
-              <View style={styles.modalHeader}>
-                <Text style={styles.modalTitle}>Vehicle Details</Text>
-                <View style={styles.headerActions}>
-                  <TouchableOpacity
-                    onPress={() => {
-                      // setHistory(true);
-                      setViewHistory(true);
-                      // navigation.navigate('History');
-                      //   console.log('History pressed');
-                    }}>
-                    <Text
-                      style={{
-                        ...styles.headerButton,
-                        color: '#316163',
-                        fontSize: RFValue(12),
-                      }}>
-                      History
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setShowMap(true);
-                      // console.log('Track pressed', Location);
-                    }}>
-                    <Text style={styles.headerButton}>Track</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => {
-                      setViewHistory(false);
-                      setShowModal(false);
-                    }}>
-                    <Text style={styles.headerButton}>Close</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+            {/* Separation Line */}
+            <View style={styles.separator} />
 
-              {/* Separation Line */}
-              <View style={styles.separator} />
-
-              {/* Modal Content */}
-              <View style={styles.modalContent}>
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                  }}>
-                  <View style={styles.detailRow}>
-                    <View style={styles.rowWithIcon}>
-                      <Icon
-                        name="speed"
-                        type="MaterialIcons"
-                        color="#316163"
-                        size={30}
-                        style={styles.icon}
-                      />
-                      <Text style={styles.detailLabel}>Speed: </Text>
-                    </View>
-                    <Text style={styles.detailValue}>
-                      {selectedValue?.speed?.toFixed(2) ?? 'N/A'} km/h
-                    </Text>
+            {/* Modal Content */}
+            <View style={styles.modalContent}>
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                <View style={styles.detailRow}>
+                  <View style={styles.rowWithIcon}>
+                    <Icon
+                      name="speed"
+                      type="MaterialIcons"
+                      color="#1E90FF"
+                      size={30}
+                      style={styles.icon}
+                    />
+                    <Text style={styles.detailLabel}>Speed: </Text>
                   </View>
-
-                  <View style={styles.detailRow}>
-                    <View style={styles.rowWithIcon}>
-                      <Icon
-                        name="trending-up"
-                        type="MaterialIcons"
-                        color="#316163"
-                        size={30}
-                        style={styles.icon}
-                      />
-                      <Text style={styles.detailLabel}>Acc: </Text>
-                    </View>
-                    <Text style={styles.detailValue}>
-                      {selectedValue?.acceleration?.toFixed(2) ?? 'N/A'} m/s²
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                  }}>
-                  <View style={styles.detailRow}>
-                    <View style={styles.rowWithIcon}>
-                      <Icon
-                        name="straighten"
-                        type="MaterialIcons"
-                        color="#316163"
-                        size={30}
-                        style={styles.icon}
-                      />
-                      <Text style={styles.detailLabel}>Total Dist: </Text>
-                    </View>
-                    <Text style={styles.detailValue}>
-                      {selectedValue?.total_distance?.toFixed(2) / 1000 ??
-                        'N/A'}{' '}
-                      km
-                    </Text>
-                  </View>
-                </View>
-
-                <View
-                  style={{
-                    flexDirection: 'row',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                  }}>
-                  <View style={styles.detailRow}>
-                    <View style={styles.rowWithIcon}>
-                      <Icon
-                        name="place"
-                        type="MaterialIcons"
-                        color="#316163"
-                        size={30}
-                        style={styles.icon}
-                      />
-                      <Text style={styles.detailLabel}>Current Dist: </Text>
-                    </View>
-                    <Text style={styles.detailValue}>
-                      {selectedValue?.current_distance?.toFixed(2) / 1000 ??
-                        'N/A'}{' '}
-                      km
-                    </Text>
-                  </View>
+                  <Text style={styles.detailValue}>
+                    {selectedValue?.speed?.toFixed(2) ?? 'N/A'} km/h
+                  </Text>
                 </View>
 
                 <View style={styles.detailRow}>
                   <View style={styles.rowWithIcon}>
                     <Icon
-                      name="update"
+                      name="trending-up"
                       type="MaterialIcons"
-                      color="#316163"
+                      color="#1E90FF"
                       size={30}
                       style={styles.icon}
                     />
-                    <Text style={styles.detailLabel}>Last Updated: </Text>
+                    <Text style={styles.detailLabel}>Acc: </Text>
                   </View>
                   <Text style={styles.detailValue}>
-                    {selectedValue?.generated_datetime
-                      ? moment(selectedValue.generated_datetime).format(
-                          'DD/MM/YYYY h:mm a',
-                        )
-                      : 'N/A'}
+                    {selectedValue?.acceleration?.toFixed(2) ?? 'N/A'} m/s²
                   </Text>
                 </View>
               </View>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                <View style={styles.detailRow}>
+                  <View style={styles.rowWithIcon}>
+                    <Icon
+                      name="straighten"
+                      type="MaterialIcons"
+                      color="#1E90FF"
+                      size={30}
+                      style={styles.icon}
+                    />
+                    <Text style={styles.detailLabel}>Total Dist: </Text>
+                  </View>
+                  <Text style={styles.detailValue}>
+                    {selectedValue?.total_distance?.toFixed(2) / 1000 ?? 'N/A'}{' '}
+                    km
+                  </Text>
+                </View>
+              </View>
+
+              <View
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  width: '100%',
+                }}>
+                <View style={styles.detailRow}>
+                  <View style={styles.rowWithIcon}>
+                    <Icon
+                      name="place"
+                      type="MaterialIcons"
+                      color="#1E90FF"
+                      size={30}
+                      style={styles.icon}
+                    />
+                    <Text style={styles.detailLabel}>Current Dist: </Text>
+                  </View>
+                  <Text style={styles.detailValue}>
+                    {selectedValue?.current_distance?.toFixed(2) / 1000 ??
+                      'N/A'}{' '}
+                    km
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.detailRow}>
+                <View style={styles.rowWithIcon}>
+                  <Icon
+                    name="update"
+                    type="MaterialIcons"
+                    color="#1E90FF"
+                    size={30}
+                    style={styles.icon}
+                  />
+                  <Text style={styles.detailLabel}>Last Updated: </Text>
+                </View>
+                <Text style={styles.detailValue}>
+                  {selectedValue?.generated_datetime
+                    ? moment(selectedValue.generated_datetime).format(
+                        'DD/MM/YYYY h:mm a',
+                      )
+                    : 'N/A'}
+                </Text>
+              </View>
             </View>
           </View>
-        </Modal>
-        <HistoryModal
-          visible={viewHistory}
-          onClose={() => setViewHistory(false)}
-          onDateSelect={handleDateSelect}
-          vehicleData={vehicleData}
-          log={Log}
-        />
-      </LinearGradient>
+        </View>
+      </Modal>
+      <HistoryModal
+        visible={viewHistory}
+        onClose={() => setViewHistory(false)}
+        onDateSelect={handleDateSelect}
+        vehicleData={vehicleData}
+        log={Log}
+      />
+      {/* </LinearGradient> */}
       {/* </MapView> */}
       <Loader visible={pageLoad} />
     </>
@@ -892,7 +980,7 @@ const styles = StyleSheet.create({
 
   cardContainer: {
     width: WIDTH * 0.94,
-    height: HEIGHT * 0.4,
+    height: HEIGHT * 0.39,
     alignSelf: 'center',
     backgroundColor: '#F7F7F7',
     borderRadius: 10,
@@ -920,7 +1008,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontFamily: BOLD,
-    color: '#316163',
+    color: '#1E90FF',
   },
   cardLabel: {
     fontSize: 14,
@@ -957,7 +1045,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#316163',
+    color: '#1E90FF',
   },
   headerActions: {
     flexDirection: 'row',
@@ -966,7 +1054,7 @@ const styles = StyleSheet.create({
   headerButton: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#316163',
+    color: '#1E90FF',
     marginLeft: 10,
   },
   separator: {
@@ -993,6 +1081,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '400',
     color: '#555',
+  },
+  contentContainer: {
+    flex: 1,
+    height: HEIGHT * 0.5,
+    width: WIDTH,
+    alignItems: 'center',
   },
 });
 

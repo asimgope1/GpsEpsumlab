@@ -1,91 +1,92 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
   SafeAreaView,
   Animated,
   ImageBackground,
   StyleSheet,
+  Alert,
+  Platform,
 } from 'react-native';
 import {MyStatusBar} from '../../constants/config';
 import {WHITE} from '../../constants/color';
 import {HEIGHT, WIDTH} from '../../constants/config';
+import RNPermissions, {PERMISSIONS, RESULTS} from 'react-native-permissions';
+import Geolocation from '@react-native-community/geolocation';
 
 const Splash = ({navigation}) => {
-  // Animated values for each circle's vertical and horizontal positions
-  const circle1X = useRef(new Animated.Value(-50)).current;
-  const circle1Y = useRef(new Animated.Value(-50)).current;
+  const [location, setLocation] = useState(null);
 
-  const circle2X = useRef(new Animated.Value(WIDTH + 50)).current;
-  const circle2Y = useRef(new Animated.Value(-50)).current;
-
-  const circle3X = useRef(new Animated.Value(-50)).current;
-  const circle3Y = useRef(new Animated.Value(-50)).current;
-
-  const circle4X = useRef(new Animated.Value(WIDTH + 50)).current;
-  const circle4Y = useRef(new Animated.Value(-50)).current;
+  // Animated values for circles
+  const circlePositions = useRef([
+    {x: new Animated.Value(-50), y: new Animated.Value(-50)}, // Circle 1
+    {x: new Animated.Value(WIDTH + 50), y: new Animated.Value(-50)}, // Circle 2
+    {x: new Animated.Value(-50), y: new Animated.Value(-50)}, // Circle 3
+    {x: new Animated.Value(WIDTH + 50), y: new Animated.Value(-50)}, // Circle 4
+  ]).current;
 
   useEffect(() => {
-    // Sequential animations for horizontal and vertical drop
-    Animated.sequence([
-      // Circle 1 animation
-      Animated.parallel([
-        Animated.timing(circle1X, {
-          toValue: WIDTH / 4 - 100,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle1Y, {
-          toValue: HEIGHT / 2.3, // Move to the center vertically
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
+    // Request location permission and get geolocation
+    const requestLocationPermission = async () => {
+      try {
+        const permission =
+          Platform.OS === 'android'
+            ? PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION
+            : PERMISSIONS.IOS.LOCATION_WHEN_IN_USE;
 
-      // Circle 2 animation
-      Animated.parallel([
-        Animated.timing(circle2X, {
-          toValue: WIDTH / 2 + 95, // Move to 3/4th of the screen width
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle2Y, {
-          toValue: HEIGHT / 3, // Move to the center vertically
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
+        const result = await RNPermissions.request(permission);
 
-      // Circle 3 animation
-      Animated.parallel([
-        Animated.timing(circle3X, {
-          toValue: WIDTH / 4 - 70, // Move to 1/4th of the screen width
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle3Y, {
-          toValue: HEIGHT / 2 + 140, // Slightly below center vertically
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
+        if (result === RESULTS.GRANTED) {
+          // Permission granted, get geolocation
+          Geolocation.getCurrentPosition(
+            position => {
+              setLocation(position.coords); // Set the user's location
+              console.log('Location:', position.coords);
+            },
+            error => {
+              console.error('Geolocation error:', error.message);
+              Alert.alert('Error', 'Failed to get location. Please try again.');
+            },
+            {maximumAge: 10000},
+          );
+        } else {
+          Alert.alert('Permission Denied', 'Location permission is required.');
+        }
+      } catch (error) {
+        console.error('Permission error:', error);
+      }
+    };
 
-      // Circle 4 animation
-      Animated.parallel([
-        Animated.timing(circle4X, {
-          toValue: WIDTH / 2 - 15, // Move to 3/4th of the screen width
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(circle4Y, {
-          toValue: HEIGHT / 2 + 40, // Slightly below center vertically
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ]),
-    ]).start(() => {
+    requestLocationPermission();
+
+    // Define target positions for each circle
+    const targetPositions = [
+      {x: WIDTH / 4 - 100, y: HEIGHT / 2.3}, // Circle 1
+      {x: WIDTH / 2 + 95, y: HEIGHT / 3}, // Circle 2
+      {x: WIDTH / 4 - 70, y: HEIGHT / 2 + 140}, // Circle 3
+      {x: WIDTH / 2 - 15, y: HEIGHT / 2 + 40}, // Circle 4
+    ];
+
+    // Sequential animation for all circles
+    Animated.sequence(
+      targetPositions.map((target, index) =>
+        Animated.parallel([
+          Animated.timing(circlePositions[index].x, {
+            toValue: target.x,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(circlePositions[index].y, {
+            toValue: target.y,
+            duration: 1000,
+            useNativeDriver: true,
+          }),
+        ]),
+      ),
+    ).start(() => {
       // Navigate to the next screen after animation
-      navigation.navigate('Login');
+      if (navigation) navigation.navigate('Login');
     });
-  }, []);
+  }, [circlePositions, navigation]);
 
   return (
     <>
@@ -98,43 +99,20 @@ const Splash = ({navigation}) => {
         source={require('../../assets/images/map1.jpeg')}
         style={styles.backgroundImage}>
         <SafeAreaView style={styles.container}>
-          {/* Animated Circles */}
-          <Animated.View
-            style={[
-              styles.circle1,
-              {
-                backgroundColor: WHITE,
-                transform: [{translateX: circle1X}, {translateY: circle1Y}],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.circle,
-              {
-                backgroundColor: WHITE,
-                transform: [{translateX: circle2X}, {translateY: circle2Y}],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.circle,
-              {
-                backgroundColor: WHITE,
-                transform: [{translateX: circle3X}, {translateY: circle3Y}],
-              },
-            ]}
-          />
-          <Animated.View
-            style={[
-              styles.circle,
-              {
-                backgroundColor: WHITE,
-                transform: [{translateX: circle4X}, {translateY: circle4Y}],
-              },
-            ]}
-          />
+          {/* Render Animated Circles Dynamically */}
+          {circlePositions.map((pos, index) => (
+            <Animated.View
+              key={index}
+              style={[
+                styles.circle,
+                index === 0 && styles.smallCircle, // Apply smaller size for Circle 1
+                {
+                  backgroundColor: WHITE,
+                  transform: [{translateX: pos.x}, {translateY: pos.y}],
+                },
+              ]}
+            />
+          ))}
         </SafeAreaView>
       </ImageBackground>
     </>
@@ -159,10 +137,8 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     position: 'absolute',
   },
-  circle1: {
+  smallCircle: {
     width: 40,
     height: 40,
-    borderRadius: 25,
-    position: 'absolute',
   },
 });
