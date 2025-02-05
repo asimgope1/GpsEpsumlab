@@ -83,18 +83,18 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
           total_distance,
           acceleration,
           timestamp,
-          locations: response.data.map(item => ({
-            latitude: item.derived_data.location[0],
-            longitude: item.derived_data.location[1],
-          })),
+          // locations: response.data.map(item => ({
+          //   latitude: item.derived_data.location[0],
+          //   longitude: item.derived_data.location[1],
+          // })),
         };
 
         setSelectedValue(vehicleDetails); // Set selected value with vehicle details
 
         // If polyline data exists, hide modal content
-        if (vehicleDetails.locations && vehicleDetails.locations.length > 1) {
-          setShowModalContent(false);
-        }
+        // if (vehicleDetails.locations && vehicleDetails.locations.length > 1) {
+        setShowModalContent(false);
+        // }
       } else {
         setSelectedValue({error: 'No data found for the selected range.'});
       }
@@ -122,7 +122,8 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
             left: WIDTH * 0.85, // Center horizontally
             height: HEIGHT * 0.05,
             width: WIDTH * 0.11,
-            backgroundColor: 'white',
+            marginTop: 25,
+            backgroundColor: '#1E90FF',
             borderRadius: WIDTH * 0.1,
             justifyContent: 'center',
             alignItems: 'center',
@@ -135,7 +136,7 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
           <Icon
             name="calendar-view-week"
             type="MaterialCommunityIcons"
-            color={BLACK}
+            color={WHITE}
             size={24}
           />
 
@@ -215,17 +216,17 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
                   ) : Object.keys(selectedValue).length > 0 ? (
                     Object.entries(selectedValue).map(([key, value]) => {
                       if (key === 'location' && typeof value === 'object') {
-                        return (
-                          <View style={styles.labelContainer} key={key}>
-                            <Text style={styles.label}>
-                              {key.toUpperCase()}:
-                            </Text>
-                            <Text style={styles.value}>
-                              Latitude: {value.latitude}, Longitude:{' '}
-                              {value.longitude}
-                            </Text>
-                          </View>
-                        );
+                        // return (
+                        //   // <View style={styles.labelContainer} key={key}>
+                        //   //   <Text style={styles.label}>
+                        //   //     {key.toUpperCase()}:
+                        //   //   </Text>
+                        //   //   <Text style={styles.value}>
+                        //   //     Latitude: {value.latitude}, Longitude:{' '}
+                        //   //     {value.longitude}
+                        //   //   </Text>
+                        //   // </View>
+                        // );
                       } else if (key === 'timestamp' && value === undefined) {
                         return (
                           <View style={styles.labelContainer} key={key}>
@@ -255,7 +256,7 @@ const HistoryModal = ({visible, onClose, onDateSelect, log}) => {
                     })
                   ) : (
                     <Text style={styles.noDataText}>
-                      No data found for the selected range.
+                      {/* No data found for the selected range. */}
                     </Text>
                   )}
                 </View>

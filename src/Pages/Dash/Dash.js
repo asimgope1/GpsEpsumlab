@@ -573,7 +573,7 @@ const Dash = ({}) => {
                 marginBottom: 10,
               }}
               mapType="hybrid"
-              showsUserLocation={true}
+              // showsUserLocation={true}
               showsCompass={true}
               loadingEnabled={true}
               userLocationFastestInterval={1000}
@@ -586,6 +586,7 @@ const Dash = ({}) => {
                 width: WIDTH * 0.85,
                 // backgroundColor: 'rgba(100,100,100,0.5)',
                 margin: 10,
+                marginTop: 25,
                 position: 'absolute',
                 flexDirection: 'row',
                 justifyContent: 'flex-start',
@@ -618,7 +619,7 @@ const Dash = ({}) => {
               ref={bottomSheetRef}
               enableDynamicSizing={true}
               onChange={handleSheetChanges}
-              snapPoints={[120, 400, '90%']}>
+              snapPoints={['15%', '45%', '90%']}>
               <BottomSheetView style={styles.contentContainer}>
                 <View
                   style={{
@@ -669,7 +670,8 @@ const Dash = ({}) => {
                 <View
                   style={{
                     width: WIDTH,
-                    height: HEIGHT * 0.28,
+                    height: HEIGHT * 0.3,
+                    padding: 5,
                     // position: 'absolute',
                   }}>
                   <TripDetailsGrid data={statusMap} />
@@ -737,13 +739,13 @@ const Dash = ({}) => {
                         contentContainerStyle={{
                           width: '100%',
                         }}
-                        refreshControl={
-                          <RefreshControl
-                            refreshing={refreshing}
-                            onRefresh={onRefresh}
-                            colors={['black']}
-                          />
-                        }
+                        // refreshControl={
+                        //   <RefreshControl
+                        //     refreshing={refreshing}
+                        //     onRefresh={onRefresh}
+                        //     colors={['black']}
+                        //   />
+                        // }
                         ListFooterComponent={
                           <View
                             style={{
