@@ -119,10 +119,7 @@ const Login = ({navigation, route}) => {
 
   return (
     <Fragment>
-      <MyStatusBar
-        backgroundColor={'rgba(255, 255, 255, 0.8)'}
-        barStyle={'dark-content'}
-      />
+      <MyStatusBar backgroundColor={'transparent'} barStyle={'dark-content'} />
       <SafeAreaView style={[appStyles.safeareacontainer]}>
         <KeyboardAvoidingView
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -300,14 +297,14 @@ const Login = ({navigation, route}) => {
                   backgroundColor: 'transparent',
                 }}>
                 {/* <VideoPlayer /> */}
-                <FastImage
+                {/* <FastImage
                   source={require('../../assets/images/truckVideo.gif')}
                   style={{
                     height: '100%',
                     width: '100%',
                     resizeMode: 'cover',
                   }}
-                />
+                /> */}
               </View>
             </ScrollView>
           </ImageBackground>

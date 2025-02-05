@@ -70,6 +70,10 @@ const Dash = ({}) => {
   const [pageLoad, setPageLoad] = useState(false);
   const [position, setPosition] = useState(null);
   const bottomSheetRef = useRef(null);
+  const projectedTrack = [
+    {latitude: 20.2961, longitude: 85.8245}, // KIIT Square, Bhubaneswar (Start)
+    {latitude: 20.29, longitude: 85.8189}, // Jayadev Vihar, Bhubaneswar (End)
+  ];
 
   // callbacks
   const handleSheetChanges = useCallback(index => {
@@ -769,6 +773,7 @@ const Dash = ({}) => {
         <View style={{flex: 1}}>
           <Track
             showTrack={showTrack}
+            projectedTrack={projectedTrack}
             latitude={Location[0]} // Pass the latitude value
             longitude={Location[1]} // Pass the longitude value
             onClose={handleClose} // Handle close functionality

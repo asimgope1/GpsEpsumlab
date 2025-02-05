@@ -15,7 +15,7 @@ const TripDetailsGrid = ({data}) => {
     let overspeedCount = 0;
     let unreachableCount = 0;
 
-    Object.keys(data).forEach(key => {
+    Object.keys(data)?.forEach(key => {
       const status = data[key];
       switch (status) {
         case 'Running':
