@@ -1,5 +1,43 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+
+
+# 🌿 MoodTracker - A Mindful Journaling App
+
+A calming, accessible mobile app built with React Native + Expo to help users reflect on their mood, write daily journal entries, and stay inspired with wellness quotes and tips.
+
+---
+
+## 🛠 Technologies Used
+
+- **React Native** (via Expo SDK)
+- **Expo Router** for file-based navigation
+- **TypeScript** for type safety
+- **Expo Image** for optimized image rendering
+- **React Native Gesture Handler** for smooth interaction
+- **AsyncStorage** for local data persistence
+- **Custom Hooks and Components** for modular, clean code
+
+---
+
+## 🎨 Design Rationale
+
+The design centers around **calmness, clarity, and consistency**:
+- **Soft pastel colors** (e.g., `#e1f4f9`) to evoke calm and focus
+- **Clear typography hierarchy** for readability
+- **Accessible interactions** with generous touch targets and contrast
+- Modular components like `MoodSelector`, `JournalInput`, and `QuoteCard` help keep screens clean and focused
+
+---
+
+## 🚀 How to Run the App Locally
+
+1. **Clone the repo**:
+   ```bash
+   git clone https://github.com/yourusername/moodtracker.git
+   cd moodtracker
+
+
 # Getting Started
 
 >**Note**: Make sure you have completed the [React Native - Environment Setup](https://reactnative.dev/docs/environment-setup) instructions till "Creating a new application" step, before proceeding.
