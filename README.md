@@ -34,8 +34,8 @@ The design centers around **calmness, clarity, and consistency**:
 
 1. **Clone the repo**:
    ```bash
-   git clone https://github.com/yourusername/moodtracker.git
-   cd moodtracker
+   git clone https://github.com/asimgope1/MoodTracker.git
+   cd MoodTracker
 
 
 # Getting Started
